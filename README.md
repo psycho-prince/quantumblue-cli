@@ -40,3 +40,41 @@ const retrievedSecret = decapsulate(cipherText, secretKey);
 ```
 
 > **Note:** These are low-level cryptographic primitives. High-level functionality for tasks like file encryption and secure data channels will be built on top of these primitives in a future update.
+
+## High-Level Hybrid Post-Quantum Encryption
+
+This CLI now includes high-level hybrid encryption, combining post-quantum KEMs (ML-KEM) with traditional symmetric encryption (AES-256-GCM) via HKDF for robust, quantum-resistant data protection.
+
+### Features
+
+*   **Hybrid KEM:** Uses `ML-KEM-768` (Kyber) combined with `X25519` for shared secret establishment.
+*   **Authenticated Encryption:** Employs `AES-256-GCM` for data encryption, ensuring confidentiality and integrity.
+*   **Key Derivation:** Utilizes `HKDF-SHA512` to derive symmetric keys from shared secrets.
+*   **File Encryption/Decryption:** Convenient functions to encrypt and decrypt entire files.
+
+### CLI Commands
+
+*   `quantumblue hybrid-keygen`: Generates a new hybrid public/secret key pair.
+*   `quantumblue encrypt-file <input> <output> --pub <hex>`: Encrypts a file for a recipient.
+*   `quantumblue decrypt-file <input> <output> --priv <hex>`: Decrypts a file using your private key.
+
+### Example Usage (High-Level API)
+
+```typescript
+import { generateHybridKeypair, encrypt, decrypt } from './src/ts/crypto-high';
+
+// Generate keys for Alice
+const { publicKey: alicePubKey, secretKey: alicePrivKey } = generateHybridKeypair();
+
+// Bob encrypts a message for Alice
+const message = "Hello, Alice! This is a quantum-safe message from Bob.";
+const encryptedData = encrypt(message, alicePubKey);
+
+// Alice decrypts the message
+const decryptedBytes = decrypt(encryptedData, alicePrivKey);
+const decryptedMessage = new TextDecoder().decode(decryptedBytes);
+
+// decryptedMessage will be "Hello, Alice! This is a quantum-safe message from Bob."
+```
+
+> **Warning:** Never commit your private keys or sensitive information directly into your repository. Use secure key management practices.
