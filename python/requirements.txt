@@ -1,0 +1,2 @@
+litellm  # for LLM calls
+# cryptography  # if needed later
