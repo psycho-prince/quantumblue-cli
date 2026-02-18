@@ -8,7 +8,7 @@ import {
   sign,
   verify,
   toHex,
-} from './src/ts/pqc';
+} from './src/ts/pqc.js';
 
 console.log('--- Testing Post-Quantum Cryptography Primitives ---');
 

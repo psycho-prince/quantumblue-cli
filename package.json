@@ -1,16 +1,28 @@
 {
   "name": "quantumblue-cli",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.1.0",
+  "description": "AI-Powered Quantum Cybersecurity Blue Team Tool",
+  "main": "dist/src/ts/cli.js",
+  "bin": {
+    "quantumblue": "src/ts/cli.ts"
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsc",
+    "start": "npx ts-node src/ts/cli.ts",
+    "test": "npx ts-node test-high.ts"
+  },
+  "keywords": [
+    "pqc",
+    "quantum",
+    "cybersecurity",
+    "ai",
+    "agent"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
+    "@sinclair/typebox": "^0.34.48",
     "@types/node": "^25.2.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
@@ -18,6 +30,7 @@
   "dependencies": {
     "@noble/ciphers": "^2.1.1",
     "@noble/hashes": "^2.0.1",
-    "@noble/post-quantum": "^0.5.4"
+    "@noble/post-quantum": "^0.5.4",
+    "commander": "^14.0.3"
   }
 }

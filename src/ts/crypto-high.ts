@@ -6,7 +6,7 @@ import * as nobleHashesSha2 from '@noble/hashes/sha2.js';
 import { gcm } from '@noble/ciphers/aes.js';
 import { randomBytes, concatBytes } from '@noble/ciphers/utils.js';
 import { ml_kem768_x25519 } from '@noble/post-quantum/hybrid.js';
-import { toHex, fromHex } from './pqc'; // Assuming pqc.ts is in the same directory
+import { toHex, fromHex } from './pqc.js'; // Assuming pqc.ts is in the same directory
 
 // --- Constants and Types ---
 
@@ -42,10 +42,10 @@ export function generateHybridKeypair(): { publicKey: string; secretKey: string 
  * @param recipientPublicKeyHex The recipient's public key (hex string).
  * @returns The encrypted object containing all necessary components for decryption.
  */
-export function encrypt(
+export async function encrypt( // Marked as async
   data: Uint8Array | string,
   recipientPublicKeyHex: string
-): EncryptedObject {
+): Promise<EncryptedObject> { // Return type also becomes Promise
   // 1. Perform hybrid KEM encapsulation to get a shared secret
   const recipientPublicKey = fromHex(recipientPublicKeyHex);
   const { sharedSecret: kemSharedSecret, cipherText: kemCiphertext } =
@@ -59,7 +59,7 @@ export function encrypt(
   const iv = randomBytes(IV_SIZE);
   const dataBytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
   const aes = gcm(derivedKey, iv);
-  const combinedCiphertextTag = aes.encrypt(dataBytes);
+  const combinedCiphertextTag = await aes.encrypt(dataBytes); // Await the promise
   const ciphertext = combinedCiphertextTag.subarray(0, combinedCiphertextTag.length - TAG_LENGTH);
   const tag = combinedCiphertextTag.subarray(combinedCiphertextTag.length - TAG_LENGTH);
 
@@ -80,10 +80,10 @@ export function encrypt(
  * @returns The decrypted plaintext as a Uint8Array.
  * @throws Error if the authentication tag is invalid.
  */
-export function decrypt(
+export async function decrypt( // Marked as async
   encryptedObject: EncryptedObject,
   privateKeyHex: string
-): Uint8Array {
+): Promise<Uint8Array> { // Return type also becomes Promise
   // 1. Decode all hex components
   const privateKey = fromHex(privateKeyHex);
   const { kemCiphertext: combinedKemCiphertext, iv, ciphertext, tag } = encryptedObject;
@@ -99,7 +99,7 @@ export function decrypt(
 
   // 4. Decrypt the data with AES-256-GCM and verify the authentication tag
   const combinedCiphertextTag = concatBytes(fromHex(ciphertext), fromHex(tag));
-  const plaintext = gcm(derivedKey, fromHex(iv)).decrypt(combinedCiphertextTag);
+  const plaintext = await gcm(derivedKey, fromHex(iv)).decrypt(combinedCiphertextTag); // Await the promise
 
   return plaintext;
 }
@@ -135,6 +135,6 @@ export async function fileDecrypt(
 ): Promise<void> {
   const encryptedFileContent = await fs.readFile(inputPath, 'utf-8');
   const encryptedObject: EncryptedObject = JSON.parse(encryptedFileContent);
-  const plaintext = decrypt(encryptedObject, privateKeyHex);
+  const plaintext = await decrypt(encryptedObject, privateKeyHex); // Await the promise
   await fs.writeFile(outputPath, plaintext);
 }

@@ -6,6 +6,13 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "baseUrl": "./", // This is important for paths to work relative to tsconfig.json
+    "paths": {
+      "@noble/hashes/hkdf": ["./node_modules/@noble/hashes/hkdf.js"],
+      "@noble/hashes/sha512": ["./node_modules/@noble/hashes/sha512.js"],
+      "@noble/ciphers/aes": ["./node_modules/@noble/ciphers/aes.js"]
+    }
   }
 }
