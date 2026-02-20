@@ -1,16 +1,16 @@
 {
   "name": "quantumblue-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-Powered Quantum Cybersecurity Blue Team Tool",
   "main": "dist/src/ts/cli.js",
   "bin": {
-    "quantumblue": "dist/src/ts/cli.js"
+    "quantumblue": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/src/ts/cli.js",
-    "test": "npx ts-node test-high.ts",
-    "build:bin": "pkg . --target node18-linux-arm64,node18-linux-x64,node18-macos-x64,node18-win-x64 --output bin/quantumblue"
+    "build": "tsc && ncc build src/ts/cli.ts -o dist --minify",
+    "build:bin": "npm run build",
+    "start": "node dist/cli.js",
+    "test": "npx ts-node test-high.ts"
   },
   "keywords": [
     "pqc",
