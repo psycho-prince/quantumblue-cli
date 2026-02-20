@@ -3,7 +3,7 @@ import {
   generateHybridKeypair,
   encryptString,
   decryptString,
-} from './src/ts/high-crypto.js';
+} from './src/ts/high-crypto.ts'; // Import from compiled JS
 
 async function runTest() {
   console.log('--- Starting Hybrid PQC Encryption Test ---');

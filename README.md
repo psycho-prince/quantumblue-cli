@@ -90,3 +90,38 @@ quantumblue 'predict the impact of quantum computing on Bitcoin by 2030'
   }
 }
 ```
+
+## Web3 Support
+
+QuantumBlue includes specialized tools for securing Web3 and blockchain infrastructure against quantum threats.
+
+### 1. ML-DSA Post-Quantum Signatures
+
+Generate ML-DSA (Dilithium) keypairs and sign/verify messages.
+
+```bash
+# Generate keys (default is mldsa65)
+quantumblue generate-signing-keypair --level mldsa87
+
+# Sign a message
+quantumblue sign --message "Web3 Transaction 2026" --priv <hex-private-key>
+
+# Verify a signature
+quantumblue verify --sig <hex-sig> --message "Web3 Transaction 2026" --pub <hex-public-key>
+```
+
+### 2. Smart Contract Quantum Scanner
+
+Analyze Solidity smart contracts for vulnerable classical cryptographic patterns.
+
+```bash
+quantumblue scan-contract --file MyContract.sol
+```
+
+### 3. Web3 Agent Analysis
+
+Ask the AI agent for specialized Web3 quantum risk assessments.
+
+```bash
+quantumblue "analyze quantum risk for Ethereum's transition to PQC"
+```

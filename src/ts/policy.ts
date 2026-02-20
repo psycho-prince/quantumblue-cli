@@ -12,8 +12,10 @@ const allowedActions = new Set<string>([
   'generate-keypair',
   'encrypt-file',
   'decrypt-file',
-  // 'analyze',
-  // 'predict',
+  'generate-signing-keypair',
+  'sign',
+  'verify',
+  'scan-contract',
 ]);
 
 /**

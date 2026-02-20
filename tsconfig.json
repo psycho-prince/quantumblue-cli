@@ -8,11 +8,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "baseUrl": "./", // This is important for paths to work relative to tsconfig.json
-    "paths": {
-      "@noble/hashes/hkdf": ["./node_modules/@noble/hashes/hkdf.js"],
-      "@noble/hashes/sha512": ["./node_modules/@noble/hashes/sha512.js"],
-      "@noble/ciphers/aes": ["./node_modules/@noble/ciphers/aes.js"]
-    }
-  }
+    "rootDir": "./",
+    "allowJs": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ]
 }

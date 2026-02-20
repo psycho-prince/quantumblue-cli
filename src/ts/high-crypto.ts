@@ -1,14 +1,52 @@
 // src/ts/high-crypto.ts
 import { ml_kem768_x25519 } from '@noble/post-quantum/hybrid.js';
-import { hkdf } from '@noble/hashes/hkdf';
-import { sha512 } from '@noble/hashes/sha512';
-import { gcm } from '@noble/ciphers/aes';
+import { ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
+import { hkdf } from '@noble/hashes/hkdf.js';
+import { sha512 } from '@noble/hashes/sha2.js';
+import { gcm } from '@noble/ciphers/aes.js';
 import { randomBytes } from '@noble/post-quantum/utils.js';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-const HKDF_INFO = 'quantumblue-hybrid-v1';
+const HKDF_INFO = encoder.encode('quantumblue-hybrid-v1');
+
+/**
+ * Returns the ML-DSA instance for a given security level.
+ */
+function getMLDSA(level: string) {
+  if (level === 'mldsa87') return ml_dsa87;
+  return ml_dsa65; // Default
+}
+
+/**
+ * Generates an ML-DSA signing keypair.
+ */
+export async function generateSigningKeypair(level: string = 'mldsa65') {
+  const dsa = getMLDSA(level);
+  const keys = dsa.keygen();
+  return {
+    publicKeyHex: bytesToHex(keys.publicKey),
+    privateKeyHex: bytesToHex(keys.secretKey),
+  };
+}
+
+/**
+ * Signs a message using ML-DSA.
+ */
+export async function signMessage(message: string, privateKeyHex: string, level: string = 'mldsa65') {
+  const dsa = getMLDSA(level);
+  const sig = dsa.sign(encoder.encode(message), hexToBytes(privateKeyHex));
+  return bytesToHex(sig);
+}
+
+/**
+ * Verifies an ML-DSA signature.
+ */
+export async function verifySignature(signatureHex: string, message: string, publicKeyHex: string, level: string = 'mldsa65') {
+  const dsa = getMLDSA(level);
+  return dsa.verify(hexToBytes(signatureHex), encoder.encode(message), hexToBytes(publicKeyHex));
+}
 
 /**
  * Generates a hybrid post-quantum/classical keypair (ML-KEM-768 & X25519).
@@ -16,10 +54,10 @@ const HKDF_INFO = 'quantumblue-hybrid-v1';
  */
 export async function generateHybridKeypair(): Promise<{ publicKeyHex: string, privateKeyHex: string }> {
   try {
-    const keyPair = await ml_kem768_x25519.generateKeyPair();
+    const keyPair = ml_kem768_x25519.keygen();
     return {
       publicKeyHex: bytesToHex(keyPair.publicKey),
-      privateKeyHex: bytesToHex(keyPair.privateKey),
+      privateKeyHex: bytesToHex(keyPair.secretKey),
     };
   } catch (error) {
     console.error('Keypair generation failed:', error);
@@ -36,20 +74,20 @@ export async function generateHybridKeypair(): Promise<{ publicKeyHex: string, p
 export async function encryptString(plaintext: string, recipientPubKeyHex: string) {
   try {
     const recipientPubKey = hexToBytes(recipientPubKeyHex);
-    const { sharedSecret, kemCiphertext } = await ml_kem768_x25519.encapsulate(recipientPubKey);
+    const { sharedSecret, cipherText } = ml_kem768_x25519.encapsulate(recipientPubKey);
 
     const derivedKey = hkdf(sha512, sharedSecret, undefined, HKDF_INFO, 32);
     const iv = randomBytes(16);
     const plaintextBytes = encoder.encode(plaintext);
     
     const aes = gcm(derivedKey, iv);
-    const ciphertext = aes.encrypt(plaintextBytes);
+    const ciphertext = await aes.encrypt(plaintextBytes); // Await the encrypt result
     
     return {
       ivHex: bytesToHex(iv),
       ciphertextHex: bytesToHex(ciphertext.slice(0, -16)),
       tagHex: bytesToHex(ciphertext.slice(-16)),
-      kemCiphertextHex: bytesToHex(kemCiphertext),
+      kemCiphertextHex: bytesToHex(cipherText),
     };
   } catch (error) {
     console.error('Encryption failed:', error);
@@ -73,7 +111,7 @@ export async function decryptString(
     const privateKey = hexToBytes(privateKeyHex);
     const kemCiphertext = hexToBytes(kemCiphertextHex);
     
-    const sharedSecret = await ml_kem768_x25519.decapsulate(kemCiphertext, privateKey);
+    const sharedSecret = ml_kem768_x25519.decapsulate(kemCiphertext, privateKey);
     
     const derivedKey = hkdf(sha512, sharedSecret, undefined, HKDF_INFO, 32);
     const iv = hexToBytes(encrypted.ivHex);
@@ -85,7 +123,7 @@ export async function decryptString(
     taggedCiphertext.set(tag, ciphertext.length);
 
     const aes = gcm(derivedKey, iv);
-    const decryptedBytes = aes.decrypt(taggedCiphertext);
+    const decryptedBytes = await aes.decrypt(taggedCiphertext); // Await the decrypt result
 
     return decoder.decode(decryptedBytes);
   } catch (error) {

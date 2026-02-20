@@ -4,7 +4,7 @@
   "description": "AI-Powered Quantum Cybersecurity Blue Team Tool",
   "main": "dist/src/ts/cli.js",
   "bin": {
-    "quantumblue": "src/ts/cli.ts"
+    "quantumblue": "dist/src/ts/cli.js"
   },
   "scripts": {
     "build": "tsc",

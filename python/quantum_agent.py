@@ -10,13 +10,34 @@ You specialize in:
 1.  **Threat Prediction**: Analyze the risk of quantum attacks on specific infrastructure.
 2.  **PQC Migration**: Advise on migrating to NIST-approved algorithms like ML-KEM (Kyber) and ML-DSA (Dilithium).
 3.  **System Hardening**: Suggest concrete steps to harden systems against both classical and quantum threats.
+4.  **Web3 Security**: Analyze smart contracts for quantum vulnerabilities and advise on post-quantum blockchain transition.
 
 Reason step-by-step and output your findings in a single, valid JSON object:
-{"thought": "Your reasoning process...", "action": "predict|analyze|harden|none", "data": {...}}
+{"thought": "Your reasoning process...", "action": "predict|analyze|harden|scan|sign|none", "data": {...}}
 """
 
 def query_llm_mock(task: str) -> dict:
     """Mocks a call to a large language model like Gemini for analysis."""
+    task_lower = task.lower()
+    
+    if "contract" in task_lower or "solidity" in task_lower or "web3" in task_lower:
+        thought = f"Analyzing task: '{task}'. The user is asking about Web3 quantum security. I need to identify risks in smart contracts or blockchain infrastructure."
+        action = "scan"
+        data = {
+            "target": "Web3 Infrastructure / Smart Contracts",
+            "risks": [
+                {"type": "Signature Breaking", "severity": "CRITICAL", "details": "ECDSA used in Ethereum/Bitcoin is vulnerable to Shor's algorithm."},
+                {"type": "Address Derivation", "severity": "HIGH", "details": "Public key hashes provide some protection, but once a transaction is sent, the public key is exposed."}
+            ],
+            "recommendation": "Transition to ML-DSA-65 or ML-DSA-87 for transaction signing. Implement account abstraction to allow for pluggable signature schemes.",
+            "migration_plan": [
+                "Layer 2 implementation of PQC signatures.",
+                "EIP-4337 based wallet migration to PQC.",
+                "Hybrid signature support for legacy compatibility."
+            ]
+        }
+        return {"thought": thought, "action": action, "data": data}
+
     thought = "The user is asking for a quantum threat assessment on their TLS certificates in 2027. I need to evaluate the risk based on current quantum progress and provide an actionable hardening plan involving PQC."
     action = "predict"
     data = {

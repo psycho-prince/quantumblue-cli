@@ -1,7 +1,8 @@
+#!/usr/bin/env node
 import { program } from 'commander';
 import { spawn } from 'child_process';
 import * as fs from 'fs/promises';
-import { generateHybridKeypair, encryptString, decryptString } from './high-crypto.js'; // Relative import
+import { generateHybridKeypair, encryptString, decryptString, generateSigningKeypair, signMessage, verifySignature } from './high-crypto.js'; // Relative import
 import { getAutonomyLevel, AutonomyLevel } from './config.js';
 import { isActionAllowed, resolveSafePath } from './policy.js';
 import readline from 'readline';
@@ -35,12 +36,123 @@ const wrapAsync = (fn: (...args: any[]) => Promise<void>) => (...args: any[]) =>
 program.version('1.0.0').description('QuantumBlue CLI for Hybrid Post-Quantum Cryptography');
 
 program
+  .command('generate-signing-keypair')
+  .description('Generates a new ML-DSA signing key pair.')
+  .option('-l, --level <level>', 'ML-DSA level (mldsa65, mldsa87)', 'mldsa65')
+  .action(wrapAsync(async (options) => {
+    if (!isActionAllowed('generate-signing-keypair')) {
+      console.log("Action blocked by policy.");
+      return;
+    }
+    if (autonomyLevel === 'readonly') {
+      console.log('Blocked: This action is not permitted in readonly mode.');
+      process.exit(0);
+    }
+    if (autonomyLevel === 'supervised') {
+      const confirmed = await confirmAction('Confirm generating a new signing key pair? (y/n): ');
+      if (!confirmed) {
+        console.log('Action cancelled by user.');
+        process.exit(0);
+      }
+    }
+    console.log(`Generating ML-DSA (${options.level}) key pair...`);
+    const { publicKeyHex, privateKeyHex } = await generateSigningKeypair(options.level);
+    console.log('Public Key (Hex):', publicKeyHex);
+    console.log('Private Key (Hex):', privateKeyHex);
+  }));
+
+program
+  .command('sign')
+  .description('Signs a message using ML-DSA.')
+  .requiredOption('-m, --message <string>', 'The message to sign.')
+  .requiredOption('-p, --priv <key>', 'The hex private key.')
+  .option('-l, --level <level>', 'ML-DSA level (mldsa65, mldsa87)', 'mldsa65')
+  .action(wrapAsync(async (options) => {
+    if (!isActionAllowed('sign')) {
+      console.log("Action blocked by policy.");
+      process.exit(1);
+    }
+    if (autonomyLevel === 'readonly') {
+      console.log('Blocked: This action is not permitted in readonly mode.');
+      process.exit(0);
+    }
+    if (autonomyLevel === 'supervised') {
+      const confirmed = await confirmAction('Confirm signing message? (y/n): ');
+      if (!confirmed) {
+        console.log('Action cancelled by user.');
+        process.exit(0);
+      }
+    }
+    const signature = await signMessage(options.message, options.priv, options.level);
+    console.log('Signature (Hex):', signature);
+  }));
+
+program
+  .command('verify')
+  .description('Verifies an ML-DSA signature.')
+  .requiredOption('-s, --sig <hex>', 'The hex signature.')
+  .requiredOption('-m, --message <string>', 'The original message.')
+  .requiredOption('-p, --pub <key>', 'The hex public key.')
+  .option('-l, --level <level>', 'ML-DSA level (mldsa65, mldsa87)', 'mldsa65')
+  .action(wrapAsync(async (options) => {
+    if (!isActionAllowed('verify')) {
+      console.log("Action blocked by policy.");
+      process.exit(1);
+    }
+    const isValid = await verifySignature(options.sig, options.message, options.pub, options.level);
+    console.log('Signature is valid:', isValid);
+  }));
+
+program
+  .command('scan-contract')
+  .description('Scans a Solidity contract for quantum vulnerabilities.')
+  .requiredOption('-f, --file <path>', 'The path to the contract file.')
+  .action(wrapAsync(async (options) => {
+    if (!isActionAllowed('scan-contract')) {
+      console.log("Action blocked by policy.");
+      process.exit(1);
+    }
+    const safePath = resolveSafePath(options.file);
+    const content = await fs.readFile(safePath, 'utf-8');
+    
+    console.log(`Scanning ${options.file} for quantum risks...`);
+    
+    const risks = [];
+    if (content.match(/ECDSA|ecrecover/gi)) {
+      risks.push('CRITICAL: Classical ECDSA detected. Vulnerable to Shor\'s algorithm.');
+    }
+    if (content.match(/secp256k1/gi)) {
+      risks.push('HIGH: secp256k1 curve used. This is not quantum-resistant.');
+    }
+    
+    if (risks.length > 0) {
+      console.log('Quantum Risk Assessment:');
+      risks.forEach(r => console.log(`- ${r}`));
+      console.log('\nRecommendation:');
+      console.log('Migrate to NIST ML-DSA (Dilithium) for quantum-resistant signatures.');
+    } else {
+      console.log('No immediate quantum risks detected (classical crypto signatures not found).');
+    }
+  }));
+
+program
   .command('generate-keypair')
   .description('Generates a new hybrid KEM key pair.')
   .action(wrapAsync(async () => {
     if (!isActionAllowed('generate-keypair')) {
       console.log("Action blocked by policy.");
       return;
+    }
+    if (autonomyLevel === 'readonly') {
+      console.log('Blocked: This action is not permitted in readonly mode.');
+      process.exit(0);
+    }
+    if (autonomyLevel === 'supervised') {
+      const confirmed = await confirmAction('Confirm generating a new key pair? (y/n): ');
+      if (!confirmed) {
+        console.log('Action cancelled by user.');
+        process.exit(0);
+      }
     }
     console.log('Generating key pair...');
     const { publicKeyHex, privateKeyHex } = await generateHybridKeypair();
