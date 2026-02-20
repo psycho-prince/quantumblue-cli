@@ -1,4 +1,4 @@
-# 🟦 QuantumBlue
+# 🧿 QuantumBlue
 ### One CLI. Quantum-safe defense. Powered by AI.
 
 [![Security: PQC](https://img.shields.io/badge/Security-Post--Quantum-blue.svg)](https://nist.gov/pqc)
