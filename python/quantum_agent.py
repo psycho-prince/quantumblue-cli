@@ -1,6 +1,7 @@
 # python/quantum_agent.py
 import sys
 import json
+import os
 # import litellm # In a real scenario, you would uncomment and install this
 
 # --- System Prompt for the Quantum Cybersecurity Agent ---
@@ -15,6 +16,48 @@ You specialize in:
 Reason step-by-step and output your findings in a single, valid JSON object:
 {"thought": "Your reasoning process...", "action": "predict|analyze|harden|scan|sign|none", "data": {...}}
 """
+
+import os
+
+# Persistent config path
+CONFIG_PATH = os.path.expanduser("~/.quantumblue_llm_config.json")
+
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r") as f:
+            return json.load(f)
+    return {"provider": "groq", "model": "llama3-70b-8192", "context": []}
+
+def save_config(config):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(config, f)
+
+LLM_CONFIG = load_config()
+
+def handle_meta_command(command: str) -> dict:
+    """Handles LLM configuration and meta commands."""
+    cmd = command.lower()
+    if "switch provider" in cmd:
+        provider = cmd.split("to")[-1].strip()
+        LLM_CONFIG["provider"] = provider
+        save_config(LLM_CONFIG)
+        return {"status": "success", "message": f"Provider switched to {provider}"}
+    if "set model" in cmd:
+        model = cmd.split("model")[-1].strip()
+        LLM_CONFIG["model"] = model
+        save_config(LLM_CONFIG)
+        return {"status": "success", "message": f"Model set to {model}"}
+    if "clear context" in cmd:
+        LLM_CONFIG["context"] = []
+        save_config(LLM_CONFIG)
+        return {"status": "success", "message": "Conversation context cleared."}
+    if "rate limits" in cmd or "token usage" in cmd:
+        return {"status": "info", "data": {"usage": "Mocked 1.2k tokens used", "limit": "98.8% remaining"}}
+    if "list models" in cmd:
+        return {"status": "info", "models": ["llama3.1", "gemma2", "claude-3.5-sonnet", "gpt-4o", "mixtral-8x7b"]}
+    if "provider info" in cmd:
+        return {"status": "info", "current": LLM_CONFIG}
+    return {"status": "error", "message": "Unknown meta command"}
 
 def query_llm_mock(task: str) -> dict:
     """Mocks a call to a large language model like Gemini for analysis."""
@@ -59,6 +102,11 @@ def main():
     if len(sys.argv) < 2:
         print(json.dumps({"error": "No task provided to the agent."}))
         sys.exit(1)
+
+    if "--meta" in sys.argv:
+        task = " ".join([a for a in sys.argv[1:] if a != "--meta"])
+        print(json.dumps(handle_meta_command(task), indent=2))
+        return
 
     task = " ".join(sys.argv[1:])
     

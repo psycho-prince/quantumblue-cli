@@ -319,30 +319,38 @@ const inputArgs = process.argv.slice(2);
 // If the first argument is not a known command and there are arguments, treat it as natural language
 if (inputArgs.length > 0 && !knownCommands.includes(inputArgs[0])) {
   const nlInput = inputArgs.join(' ');
-  console.log("Forwarding complex request to Quantum Agent...");
+  const metaKeywords = ["switch provider", "set model", "clear context", "rate limits", "token usage", "list models", "provider info"];
+  const isMeta = metaKeywords.some(k => nlInput.toLowerCase().includes(k));
 
   // Autonomy check before spawning the agent
   if (autonomyLevel === 'readonly') {
     console.log('Blocked: Agent interaction is not permitted in readonly mode.');
     process.exit(0);
   }
-  if (autonomyLevel === 'supervised') {
-    confirmAction('Confirm forwarding to AI agent? (y/n): ').then(confirmed => {
-      if (confirmed) {
-        spawnQuantumAgent(nlInput);
-      } else {
-        console.log('Action cancelled by user.');
-        process.exit(0);
-      }
-    });
-  } else { // full autonomy
-    spawnQuantumAgent(nlInput);
+
+  if (isMeta) {
+    // Immediate execution for meta commands
+    spawnQuantumAgent(nlInput, true);
+  } else {
+    console.log("Forwarding complex request to Quantum Agent...");
+    if (autonomyLevel === 'supervised') {
+      confirmAction('Confirm forwarding to AI agent? (y/n): ').then(confirmed => {
+        if (confirmed) {
+          spawnQuantumAgent(nlInput);
+        } else {
+          console.log('Action cancelled by user.');
+          process.exit(0);
+        }
+      });
+    } else { // full autonomy
+      spawnQuantumAgent(nlInput);
+    }
   }
 } else {
   program.parse(process.argv);
 }
 
-function spawnQuantumAgent(nlInput: string) {
+function spawnQuantumAgent(nlInput: string, isMeta: boolean = false) {
   // Debug log to find where we are running from
   // console.log('DEBUG: __dirname is', __dirname);
 
@@ -358,8 +366,9 @@ function spawnQuantumAgent(nlInput: string) {
   }
 
   const agentPath = path.join(projectRoot, 'python', 'quantum_agent.py');
+  const args = isMeta ? ['--meta', nlInput] : [nlInput];
 
-  const py = spawn('python3', [agentPath, nlInput]);
+  const py = spawn('python3', [agentPath, ...args]);
 
   py.stdout.on('data', (data) => {
     console.log(`Quantum Agent Response:\n${data}`);
