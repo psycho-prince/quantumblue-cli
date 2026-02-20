@@ -2,10 +2,15 @@
 import { program } from 'commander';
 import { spawn } from 'child_process';
 import * as fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { generateHybridKeypair, encryptString, decryptString, generateSigningKeypair, signMessage, verifySignature } from './high-crypto.js'; // Relative import
 import { getAutonomyLevel, AutonomyLevel } from './config.js';
 import { isActionAllowed, resolveSafePath } from './policy.js';
 import readline from 'readline';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const autonomyLevel = getAutonomyLevel();
 console.log(`Starting QuantumBlue CLI with autonomy level: ${autonomyLevel}`);
@@ -338,7 +343,23 @@ if (inputArgs.length > 0 && !knownCommands.includes(inputArgs[0])) {
 }
 
 function spawnQuantumAgent(nlInput: string) {
-  const py = spawn('python3', ['python/quantum_agent.py', nlInput]);
+  // Debug log to find where we are running from
+  // console.log('DEBUG: __dirname is', __dirname);
+
+  // When bundled with NCC and linked globally:
+  // /path/to/quantumblue-cli/dist/cli.js
+  // We need /path/to/quantumblue-cli/python/quantum_agent.py
+  
+  let projectRoot = __dirname;
+  if (projectRoot.includes('dist')) {
+    projectRoot = path.resolve(projectRoot.split('dist')[0]);
+  } else if (projectRoot.includes('src')) {
+    projectRoot = path.resolve(projectRoot.split('src')[0]);
+  }
+
+  const agentPath = path.join(projectRoot, 'python', 'quantum_agent.py');
+
+  const py = spawn('python3', [agentPath, nlInput]);
 
   py.stdout.on('data', (data) => {
     console.log(`Quantum Agent Response:\n${data}`);
