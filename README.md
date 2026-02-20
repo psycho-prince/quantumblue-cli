@@ -1,127 +1,86 @@
-# QuantumBlue CLI
+# 🟦 QuantumBlue
+### One CLI. Quantum-safe defense. Powered by AI.
 
-**AI-Powered Quantum Cybersecurity Blue Team Tool**
+[![Security: PQC](https://img.shields.io/badge/Security-Post--Quantum-blue.svg)](https://nist.gov/pqc)
+[![License: ISC](https://img.shields.io/badge/License-ISC-green.svg)](https://opensource.org/licenses/ISC)
+[![Build: Single Binary](https://img.shields.io/badge/Build-Single%20Binary-orange.svg)]()
 
-QuantumBlue is a command-line interface designed to help developers and security professionals (blue teams) prepare for the post-quantum era. It combines state-of-the-art hybrid post-quantum cryptography with an AI-powered agent to provide analysis, threat prediction, and system hardening recommendations.
+QuantumBlue is the definitive command-line defense suite for the post-quantum era. It combines NIST-standardized cryptographic primitives with a sovereign AI agent to protect your data, files, and Web3 infrastructure from the "Q-Day" threat.
 
 ---
 
-## Features
+## ⚡ Core Pillars
 
-*   **Hybrid Post-Quantum Cryptography**: Implements ML-KEM-768 (Kyber) combined with X25519 for robust, forward-secret encryption of strings and files.
-*   **Agentic AI**: Features an integrated Python-based AI agent (QuantumBlue Agent) that can be queried using natural language to get expert analysis on quantum threats and PQC migration strategies.
-*   **Autonomy Levels**: Inspired by agentic runtimes, the CLI operates at different autonomy levels (`readonly`, `supervised`, `full`) to ensure safety and user control over sensitive operations.
-*   **Natural Language Interface**: The CLI can parse simple natural language commands, and forwards complex queries directly to the QuantumBlue Agent.
-*   **Secure by Design**: Enforces a strict security policy with an action allowlist and a sandboxed path resolution system (`resolveSafePath`) to prevent unauthorized file system access.
+### 🛡️ Sovereign Cryptography
+- **Hybrid PQC**: ML-KEM-768 (Kyber) + X25519 for forward-secret encryption.
+- **Web3 Signatures**: ML-DSA (Dilithium) support for quantum-resistant blockchain transactions.
+- **Single Binary**: No dependencies. No runtime required. Just security.
 
-## Installation
+### 🤖 Quantum Agent
+- **AI-Driven Hardening**: Natural language interface to analyze infrastructure risk.
+- **Smart Scanner**: Automatic detection of vulnerable classical crypto in Solidity/Web3 contracts.
+- **Predictive Intel**: Real-time assessment of quantum timelines and threat vectors.
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-repo/quantumblue-cli.git
-    cd quantumblue-cli
-    ```
+### ⚖️ Enterprise Policy
+- **Autonomy Levels**: From `readonly` to `full` autonomy, ensuring the AI works within your guardrails.
+- **Zero-Trust Defaults**: Sandbox path resolution and action allowlists.
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    # Install Python dependencies for the agent
-    pip install litellm
-    ```
+---
 
-3.  **Link the CLI for global use:**
-    ```bash
-    npm link
-    ```
+## 🚀 Quick Start
 
-## Usage Examples
-
-### 1. Generate a Keypair
-
-Create a new hybrid PQC keypair.
+### Installation
+Download the pre-compiled binary for your system:
 
 ```bash
-quantumblue generate-keypair
+# Example for Linux/macOS
+curl -L https://github.com/psycho-prince/quantumblue/releases/latest/download/quantumblue -o quantumblue
+chmod +x quantumblue
+sudo mv quantumblue /usr/local/bin/
 ```
 
-### 2. Encrypt/Decrypt a String
+### Usage
 
-Encrypt a short message using a recipient's public key.
+**1. Secure a Message (Hybrid PQC)**
+```bash
+quantumblue encrypt --text "Confidential Payload" --pub [recipient-key]
+```
+
+**2. Scan a Smart Contract**
+```bash
+quantumblue scan-contract --file Vault.sol
+```
+
+**3. Ask the Agent**
+```bash
+quantumblue "Analyze quantum risk for our Ethereum L2 migration by 2027"
+```
+
+---
+
+## 🛠️ Development & Binary Build
+
+QuantumBlue is built with TypeScript and Python. To build the standalone binaries yourself:
 
 ```bash
-# (This is a long command, you would typically use variables)
-quantumblue encrypt --text "secret message" --pub 02...
-quantumblue decrypt --iv <iv> --cipher <cipher> --tag <tag> --kem <kem> --priv <priv>
+npm run build
+npm run build:bin
 ```
 
-### 3. Encrypt/Decrypt a File
+---
 
-Securely encrypt a file.
+## 💎 Support & Funding
+QuantumBlue is an open-core project. Support our mission to secure the digital future.
+See [FUNDING.yml](.github/FUNDING.yml) for details.
 
-```bash
-# Create a secret file
-echo "My top secret data." > secret.txt
+---
 
-# Encrypt it
-quantumblue encrypt-file --input secret.txt --output secret.enc --pub <your-public-key>
-
-# Decrypt it
-quantumblue decrypt-file --input secret.enc --output secret.dec --priv <your-private-key>
-```
-
-### 4. Query the AI Agent
-
-Use natural language to ask the QuantumBlue Agent for analysis.
-
-```bash
-quantumblue 'predict the impact of quantum computing on Bitcoin by 2030'
-```
-```json
-{
-  "thought": "The user is asking for a quantum threat assessment on Bitcoin. I need to analyze its cryptographic underpinnings (ECDSA) and provide an actionable prediction.",
-  "action": "predict",
-  "data": {
-    "target": "Bitcoin (BTC)",
-    "threat": "Shor's Algorithm breaking the ECDSA signatures used for transactions.",
-    "risk_level": "Critical",
-    "timeframe": "2028-2032",
-    "recommendation": "Monitor proposals for PQC algorithms in the Bitcoin protocol (BIPs). Assets should be held in PQC-safe wallets once available. Do not reuse addresses.",
-    "hardening_steps": []
-  }
-}
-```
-
-## Web3 Support
-
-QuantumBlue includes specialized tools for securing Web3 and blockchain infrastructure against quantum threats.
-
-### 1. ML-DSA Post-Quantum Signatures
-
-Generate ML-DSA (Dilithium) keypairs and sign/verify messages.
-
-```bash
-# Generate keys (default is mldsa65)
-quantumblue generate-signing-keypair --level mldsa87
-
-# Sign a message
-quantumblue sign --message "Web3 Transaction 2026" --priv <hex-private-key>
-
-# Verify a signature
-quantumblue verify --sig <hex-sig> --message "Web3 Transaction 2026" --pub <hex-public-key>
-```
-
-### 2. Smart Contract Quantum Scanner
-
-Analyze Solidity smart contracts for vulnerable classical cryptographic patterns.
-
-```bash
-quantumblue scan-contract --file MyContract.sol
-```
-
-### 3. Web3 Agent Analysis
-
-Ask the AI agent for specialized Web3 quantum risk assessments.
-
-```bash
-quantumblue "analyze quantum risk for Ethereum's transition to PQC"
+## 📄 Logo
+```text
+   ____                       __                     ____   __            
+  / __ \ __  __ ____ _ ____  / /_ __  __ ____ ___   / __ ) / /__  __ ___ 
+ / / / // / / // __ `// __ \/ __// / / // __ `__ \ / __  |/ // / / // _ \
+/ /_/ // /_/ // /_/ // / / // /_ / /_/ // / / / / // /_/ // // /_/ //  __/
+\___\_\\__,_/ \__,_//_/ /_/ \__/ \__,_//_/ /_/ /_//_____//_/ \__,_/ \___/ 
+                                                                          
 ```
