@@ -1,7 +1,21 @@
-node_modules/
-__pycache__/
-*.pyc
-.env
-dist/
-build/
-*.log
+# Security: Never push your actual identity or master keys
+*.sk
+*.pk
+master.key
+*.pqc
+
+# Binaries
+pqc-cli
+pqc.sk
+pqc.pk
+id.sk
+id.pk
+
+# Test files
+*.decrypted
+ai_core.py
+vault_test.txt
+final_vault_test.txt
+secure_script_v*.py
+seal_output.txt
+test_research.txt*

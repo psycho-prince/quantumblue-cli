@@ -1,39 +1,23 @@
 {
   "name": "quantumblue-cli",
-  "version": "0.2.0",
-  "description": "AI-Powered Quantum Cybersecurity Blue Team Tool",
-  "main": "dist/src/ts/cli.js",
+  "version": "2.0.0",
+  "description": "Sovereign PQC Notary - Gold Standard v2.0.0",
+  "main": "dist/cli.js",
   "bin": {
     "quantumblue": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && ncc build src/ts/cli.ts -o dist --minify",
-    "build:bin": "npm run build",
-    "start": "node dist/cli.js",
-    "test": "npx ts-node test-high.ts"
+    "build": "go build -o quantumblue ./cmd/pqc-cli",
+    "test": "go test ./..."
   },
   "keywords": [
     "pqc",
     "quantum",
     "cybersecurity",
-    "ai",
-    "agent"
+    "ml-kem",
+    "ml-dsa",
+    "notary"
   ],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "devDependencies": {
-    "@sinclair/typebox": "^0.34.48",
-    "@types/node": "^25.2.3",
-    "@vercel/ncc": "^0.38.4",
-    "pkg": "^5.8.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@noble/ciphers": "^2.1.1",
-    "@noble/hashes": "^2.0.1",
-    "@noble/post-quantum": "^0.5.4",
-    "commander": "^14.0.3"
-  }
+  "author": "Prince Philip",
+  "license": "ISC"
 }

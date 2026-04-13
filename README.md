@@ -7,81 +7,73 @@
 \___\_\\__,_/ \__,_//_/ /_/ \__/ \__,_//_/ /_/ /_//_____//_/ \__,_/ \___/ 
                                                                           
 ```
-# 🧿 QuantumBlue
-### One CLI. Quantum-safe defense. Powered by AI.
+# 🧿 QuantumBlue v2.0.0: The Gold Standard
+### Sovereign PQC Notary. Built for the Post-Quantum Era.
 
-[![Security: PQC](https://img.shields.io/badge/Security-Post--Quantum-blue.svg)](https://nist.gov/pqc)
+[![Security: PQC](https://img.shields.io/badge/Security-ML--KEM--768%20|%20ML--DSA--65-blue.svg)](https://nist.gov/pqc)
 [![License: ISC](https://img.shields.io/badge/License-ISC-green.svg)](https://opensource.org/licenses/ISC)
-[![Build: Single Binary](https://img.shields.io/badge/Build-Single%20Binary-orange.svg)]()
+[![Build: Single Binary](https://img.shields.io/badge/Build-Go%20Binary-orange.svg)]()
 
-QuantumBlue is the definitive command-line defense suite for the post-quantum era. It combines NIST-standardized cryptographic primitives with a sovereign AI agent to protect your data, files, and Web3 infrastructure from the "Q-Day" threat.
+QuantumBlue v2.0.0 is a complete re-architecture of the definitive command-line defense suite. Built in Go for high performance, it provides a cryptographic notary service for AI models, Web3 smart contracts, and mobile infrastructure.
 
 ---
 
-## ⚡ Core Pillars
+## ⚡ v2.0.0 Core Features
 
-### 🛡️ Sovereign Cryptography
-- **Hybrid PQC**: ML-KEM-768 (Kyber) + X25519 for forward-secret encryption.
-- **Web3 Signatures**: ML-DSA (Dilithium) support for quantum-resistant blockchain transactions.
-- **Single Binary**: No dependencies. No runtime required. Just security.
+### 🛡️ Quantum-Signed Envelopes (v2)
+- **ML-KEM-768 (Kyber)**: Hybrid key exchange ensures confidentiality.
+- **ML-DSA-65 (Dilithium)**: Authenticated digital signatures for immutable authorship.
+- **Versioned Headers**: Portability and agility for long-term (10+ year) storage.
 
-### 🤖 Quantum Agent
-- **AI-Driven Hardening**: Natural language interface to analyze infrastructure risk.
-- **Smart Scanner**: Automatic detection of vulnerable classical crypto in Solidity/Web3 contracts.
-- **Predictive Intel**: Real-time assessment of quantum timelines and threat vectors.
+### 🧿 The Sovereign Daemon
+- **Autonomous Notary**: Monitors your source directories (`.ts`, `.py`, `.sol`) and auto-seals them upon save.
+- **Hardware-Backed Logic**: Uses a secure-store simulation (ready for JNI/CGO integration) for master key protection.
 
-### ⚖️ Enterprise Policy
-- **Autonomy Levels**: From `readonly` to `full` autonomy, ensuring the AI works within your guardrails.
-- **Zero-Trust Defaults**: Sandbox path resolution and action allowlists.
+### 📂 Streaming Encryption
+- **Large-Scale Assets**: Capable of protecting GB-scale AI models and binary artifacts with chunked streaming.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Installation
-Download the pre-compiled binary for your system:
+Build the standalone binary:
 
 ```bash
-# Example for Linux/macOS
-curl -L https://github.com/psycho-prince/quantumblue/releases/latest/download/quantumblue -o quantumblue
-chmod +x quantumblue
+go build -o quantumblue ./cmd/pqc-cli
 sudo mv quantumblue /usr/local/bin/
 ```
 
 ### Usage
 
-**1. Secure a Message (Hybrid PQC)**
+**1. Generate Your Identity**
 ```bash
-quantumblue encrypt --text "Confidential Payload" --pub [recipient-key]
+quantumblue -mode=identity
 ```
 
-**2. Scan a Smart Contract**
+**2. Seal and Sign a File**
 ```bash
-quantumblue scan-contract --file Vault.sol
+quantumblue -mode=seal -file research_draft.pdf
 ```
 
-**3. Ask the Agent**
+**3. Start the Auto-Notary Daemon**
 ```bash
-quantumblue "Analyze quantum risk for our Ethereum L2 migration by 2027"
+quantumblue -mode=daemon -watch ./src
 ```
 
----
-
-## 🛠️ Development & Binary Build
-
-QuantumBlue is built with TypeScript and Python. To build the standalone binaries yourself:
-
+**4. Unseal and Verify**
 ```bash
-npm run build
-npm run build:bin
+quantumblue -mode=unseal -file research_draft.pdf.pqc -sk-kem=pqc.sk -pk-dsa=id.pk
 ```
 
 ---
 
-## 💎 Support & Funding
-QuantumBlue is an open-core project. Support our mission to secure the digital future.
-See [FUNDING.yml](.github/FUNDING.yml) for details.
+## 🛠️ Project Structure
+- `internal/crypto`: ML-KEM, ML-DSA, and HMAC-SHA3-256 hybrid logic.
+- `internal/daemon`: fsnotify-based directory monitoring for autonomous protection.
+- `internal/storage`: Mock Secure Store for hardware-backed key protection.
 
 ---
 
-## 📄 BUY ME AN COFFEE : buymeacoffee.com/Princephilip
+## 📄 LICENSE: ISC
+🧿 Protecting the future of digital heritage. buymeacoffee.com/Princephilip
