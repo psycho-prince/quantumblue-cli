@@ -18,6 +18,7 @@
     "ml-dsa",
     "notary"
   ],
-  "author": "Prince Philip",
+  "author": "Prince <prince.philip@quantum-blue.in>",
+  "homepage": "https://quantum-blue.in",
   "license": "ISC"
 }

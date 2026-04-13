@@ -76,4 +76,4 @@ quantumblue -mode=unseal -file research_draft.pdf.pqc -sk-kem=pqc.sk -pk-dsa=id.
 ---
 
 ## 📄 LICENSE: ISC
-🧿 Protecting the future of digital heritage. buymeacoffee.com/Princephilip
+🧿 Protecting the future of digital heritage. info@quantum-blue.in
