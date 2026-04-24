@@ -7,6 +7,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/psycho-prince/pqc-sdk/internal/crypto"
+	"github.com/psycho-prince/pqc-sdk/internal/api"
 )
 
 // Config holds the daemon settings.
@@ -67,6 +68,8 @@ func handleFileEvent(path string, cfg Config) {
 		err := crypto.SealSignedStream(path, outPath, cfg.PublicKeyKEM, cfg.PrivateKeyDSA, cfg.ClassicSecret)
 		if err != nil {
 			log.Printf("❌ Notary failed for %s: %v\n", path, err)
+		} else {
+			go api.SyncAsset(filepath.Base(path), outPath)
 		}
 	}
 }

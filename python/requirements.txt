@@ -2,3 +2,5 @@ litellm  # for LLM calls
 # cryptography  # if needed later
 scikit-learn
 requests
+dilithium-py
+python-dotenv
