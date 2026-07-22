@@ -23,10 +23,20 @@ QuantumBlue assists Blue Teams in identifying legacy cryptographic vulnerabiliti
 
 ## 🚀 Quick Start
 
-### Installation
+### Installation (Recommended)
+Install the CLI globally via NPM:
+
+```bash
+npm install -g quantumblue-cli
+```
+You can now run the tool directly using the `quantumblue` command.
+
+### Installation (From Source)
+Build the standalone binary manually:
+
 ```bash
 go build -o quantumblue ./cmd/pqc-cli
-# Add to PATH
+# Add the binary to your PATH
 ```
 
 ### Usage Examples
