@@ -21,6 +21,43 @@ QuantumBlue assists Blue Teams in identifying legacy cryptographic vulnerabiliti
 
 ---
 
+## ⚠️ Project Status & Assessment
+
+QuantumBlue is currently an **experimental, early-stage prototype**.
+
+- **Purpose**: Designed as a supplementary scanning and prototyping aid for Blue Teams and researchers.
+- **AI-Assisted Migration**: While the migration pipeline leverages AI for code generation, **it must never be trusted blindly for production**. All AI-generated cryptographic code requires expert review, side-channel analysis, and thorough testing.
+- **Maturity**: This project lacks battle-testing and community validation. It is not intended as a production-grade enterprise solution.
+- **Security**: Treat this tool as an experimental assistant. For critical production PQC migrations, prioritize established, battle-tested cryptographic libraries (e.g., `liboqs`, `OpenSSL 3.x` with PQC support) and manual security audits.
+
+---
+
+## 🗺️ Roadmap & Future Direction
+
+We are evolving QuantumBlue into a robust, enterprise-ready PQC migration platform.
+
+### Core Architecture & Reliability
+- **Hybrid Migration**: Move beyond LLM-only generation to mandatory rule-based/template-based transformations (e.g., integrating `liboqs`, `OpenSSL`).
+- **Static Analysis**: Integrate advanced static analysis (Semgrep, custom AST parsers) for more accurate crypto discovery.
+- **Human-in-the-Loop**: Implement diff reviews, approval gates, and automated test enforcement for AI-generated suggestions.
+- **Tech Stack Consolidation**: Standardize on a primary language (Go) and provide native, signed standalone binaries.
+
+### Enterprise Features
+- **Comprehensive Discovery**: Expand scanning to binaries, containers, cloud configurations, and database encryption settings.
+- **CBOM**: Generate standardized Cryptographic Bill of Materials.
+- **Hybrid Support**: Support seamless transition periods (classical + PQC).
+- **Scalability**: Implement REST API, daemon authentication/audit trails, and integration with SIEM/Enterprise tools.
+
+### Security & Crypto Hardening
+- **Formal Validation**: Focus on side-channel resistance and constant-time implementations.
+- **Key Management**: Add support for Hardware Security Modules (HSMs) and zero-trust key storage practices.
+
+### Practical Improvements
+- **Configuration**: Implement YAML/JSON-based config management and environment-aware profiles.
+- **UX**: Enhance error handling, progress monitoring, and rollback capabilities.
+
+---
+
 ## 🚀 Quick Start
 
 ### Installation (Recommended)
