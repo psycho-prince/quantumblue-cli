@@ -1,79 +1,48 @@
+# QuantumBlue CLI
 
-```text
-   ____                       __                     ____   __            
-  / __ \ __  __ ____ _ ____  / /_ __  __ ____ ___   / __ ) / /__  __ ___ 
- / / / // / / // __ `// __ \/ __// / / // __ `__ \ / __  |/ // / / // _ \
-/ /_/ // /_/ // /_/ // / / // /_ / /_/ // / / / / // /_/ // // /_/ //  __/
-\___\_\\__,_/ \__,_//_/ /_/ \__/ \__,_//_/ /_/ /_//_____//_/ \__,_/ \___/ 
-                                                                          
-```
-# 🧿 QuantumBlue v2.0.0: The Gold Standard
-### Sovereign PQC Notary. Built for the Post-Quantum Era.
+🧿 **QuantumBlue v2.0.0: The Sovereign PQC Notary**
 
-[![Security: PQC](https://img.shields.io/badge/Security-ML--KEM--768%20|%20ML--DSA--65-blue.svg)](https://nist.gov/pqc)
-[![License: ISC](https://img.shields.io/badge/License-ISC-green.svg)](https://opensource.org/licenses/ISC)
-[![Build: Single Binary](https://img.shields.io/badge/Build-Go%20Binary-orange.svg)]()
+QuantumBlue is a command-line defense suite designed for the post-quantum era. It provides cryptographic notary services, autonomous directory monitoring, and automated PQC migration analysis to protect AI models, smart contracts, and infrastructure against quantum-enabled threats.
 
-QuantumBlue v2.0.0 is a complete re-architecture of the definitive command-line defense suite. Built in Go for high performance, it provides a cryptographic notary service for AI models, Web3 smart contracts, and mobile infrastructure.
+## ⚡ Core Capabilities
 
----
+### 1. PQC Migration Suite (Diagnosis & Planning)
+QuantumBlue assists Blue Teams in identifying legacy cryptographic vulnerabilities and planning migration to NIST-standardized PQC primitives (ML-KEM/ML-DSA).
 
-## ⚡ v2.0.0 Core Features
+*   **`-mode=analyze`**: Performs a cryptographic inventory scan on a target directory, identifying legacy primitives (e.g., `ecrecover`, `keccak256`) and exporting a structured `inventory.json` for risk assessment.
+*   **`-mode=migrate`**: Executes a migration pipeline (Analysis -> Context Retrieval -> AI Generation) to generate secure PQC-compliant replacement code.
 
-### 🛡️ Quantum-Signed Envelopes (v2)
-- **ML-KEM-768 (Kyber)**: Hybrid key exchange ensures confidentiality.
-- **ML-DSA-65 (Dilithium)**: Authenticated digital signatures for immutable authorship.
-- **Versioned Headers**: Portability and agility for long-term (10+ year) storage.
+### 2. Sovereign Notary (Seal & Verify)
+*   **`-mode=seal`**: Signs and seals files using ML-KEM-768 for confidentiality and ML-DSA-65 for immutable authorship.
+*   **`-mode=unseal`**: Verifies signatures and decrypts Quantum-Signed Envelopes.
 
-### 🧿 The Sovereign Daemon
-- **Autonomous Notary**: Monitors your source directories (`.ts`, `.py`, `.sol`) and auto-seals them upon save.
-- **Hardware-Backed Logic**: Uses a secure-store simulation (ready for JNI/CGO integration) for master key protection.
-
-### 📂 Streaming Encryption
-- **Large-Scale Assets**: Capable of protecting GB-scale AI models and binary artifacts with chunked streaming.
+### 3. Sovereign Daemon
+*   **`-mode=daemon`**: Monitors source directories (`.ts`, `.py`, `.sol`) and auto-seals them upon save to ensure continuous protection.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Installation
-Build the standalone binary:
-
 ```bash
 go build -o quantumblue ./cmd/pqc-cli
-sudo mv quantumblue /usr/local/bin/
+# Add to PATH
 ```
 
-### Usage
+### Usage Examples
 
-**1. Generate Your Identity**
+**Analyze a project for legacy cryptography:**
 ```bash
-quantumblue -mode=identity
+quantumblue -mode=analyze -target=./src/contracts
 ```
 
-**2. Seal and Sign a File**
+**Seal a sensitive asset:**
 ```bash
-quantumblue -mode=seal -file research_draft.pdf
-```
-
-**3. Start the Auto-Notary Daemon**
-```bash
-quantumblue -mode=daemon -watch ./src
-```
-
-**4. Unseal and Verify**
-```bash
-quantumblue -mode=unseal -file research_draft.pdf.pqc -sk-kem=pqc.sk -pk-dsa=id.pk
+quantumblue -mode=seal -file research_data.pdf
 ```
 
 ---
 
-## 🛠️ Project Structure
-- `internal/crypto`: ML-KEM, ML-DSA, and HMAC-SHA3-256 hybrid logic.
-- `internal/daemon`: fsnotify-based directory monitoring for autonomous protection.
-- `internal/storage`: Mock Secure Store for hardware-backed key protection.
-
----
-
-## 📄 LICENSE: ISC
-🧿 Protecting the future of digital heritage. info@quantum-blue.in
+## 🛡️ Security Mandates
+- Never commit `pqc.sk` or `id.sk` (private keys) to source control.
+- Ensure `OPENAI_API_KEY` is managed securely as an environment variable for migration features.

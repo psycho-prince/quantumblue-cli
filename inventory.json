@@ -1,0 +1,10 @@
+[
+  {
+    "file_path": "tests/contracts/Vulnerable.sol",
+    "type": "Solidity",
+    "findings": [
+      "ecrecover",
+      "keccak256"
+    ]
+  }
+]
