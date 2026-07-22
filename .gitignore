@@ -1,22 +1,24 @@
-# Security: Never push your actual identity or master keys
-*.sk
-*.pk
-master.key
-*.pqc
+# Go
+/qb
+/cmd/qb/qb
+*.exe
+*.test
+*.out
 
-# Binaries
-pqc-cli
-pqc.sk
-pqc.pk
-id.sk
-id.pk
+# Node
+/node_modules
+/dist
+/build
 
-# Test files
-*.decrypted
-ai_core.py
-vault_test.txt
-final_vault_test.txt
-secure_script_v*.py
-seal_output.txt
-test_research.txt*
-\nquantumblue
+# Python
+__pycache__/
+*.pyc
+.pytest_cache
+
+# IDE/System
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
