@@ -1,28 +1,41 @@
 # QuantumBlue CLI
 
-QuantumBlue is an enterprise-grade cryptographic discovery, migration, and compliance suite, designed to help organizations transition to Post-Quantum Cryptography (PQC).
+[![CI/CD Pipeline](https://github.com/psycho-prince/pqc-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/psycho-prince/pqc-sdk/actions/workflows/ci.yml)
 
-## Architecture
-The CLI is built in Go, providing high performance, cross-platform binary distribution, and reliable static analysis.
+QuantumBlue CLI is a production-ready, security-hardened toolkit for Post-Quantum Cryptography (PQC) and legal-tech evidence preservation. It empowers organizations to migrate existing cryptographic infrastructure to NIST-standardized quantum-resistant algorithms while ensuring legal admissibility of electronic records under Indian law (IT Act, Indian Evidence Act).
 
-### Core Components
-- `cmd/qb`: Entry point for the CLI.
-- `internal/scanner`: Static analysis engine for cryptographic primitive detection and CBOM generation.
-- `internal/policy`: Security policy enforcement engine for flagging forbidden algorithms (e.g., MD5).
-- `internal/server`: REST API Daemon mode for remote scan orchestration.
+## Core Pillars
+*   **Cryptographic Agility:** Hybrid signature scheme (ML-DSA + ECDSA) ensuring both quantum-resistance and immediate classical compatibility.
+*   **Evidence Integrity:** RFC 3161 timestamping integration and tamper-evident audit logging for Section 65B(4) compliance.
+*   **Standardized Discovery:** Automated generation of Cryptographic Bill of Materials (CBOM) for Go binaries, compiled binaries (ELF), and infrastructure configurations.
+*   **Risk-Based Remediation:** Automated inventory risk scoring (CRITICAL to LOW) to prioritize cryptographic migration efforts.
 
-## Getting Started
+## Quick Start
 
-### Installation
-1. Ensure Go is installed (v1.22+).
-2. Clone the repository: `git clone <url>`
-3. Build the binary: `go build -o qb ./cmd/qb/main.go`
+### Build
+```bash
+make
+```
 
-### Usage
-- **Scan a file:** `./qb scan <path/to/file.go>` (Outputs CBOM JSON)
-- **Run in Daemon mode:** `./qb daemon <port>`
+### Discovery & Prioritization
+Scan infrastructure and generate a prioritized CBOM report:
+```bash
+./bin/qb -mode=analyze -target=/path/to/infrastructure
+cat inventory.json
+```
 
-## Development
-- **Tests:** `go test ./internal/...`
-- **Distribution:** Configured with `goreleaser` for automated releases.
-- **CI/CD:** Automated workflows in `.github/workflows/`.
+### Cryptographic Operations
+Generate identity and seal files with PQC:
+```bash
+./bin/qb -mode=identity
+./bin/qb -mode=seal -file=my-secret-doc.pdf
+```
+
+## Documentation
+- [Legal Compliance Checklist](/docs/LEGAL_COMPLIANCE_CHECKLIST.md)
+- [Technical Spec: Hybrid PQC & TSA](/docs/TECH_SPEC_HYBRID_PQC_TSA.md)
+- [Security Policy](/SECURITY.md)
+- [Contributing Guidelines](/CONTRIBUTING.md)
+
+## License
+Apache License 2.0
