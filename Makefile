@@ -1,15 +1,20 @@
-# Simple Makefile for QuantumBlue CLI
 BINARY_NAME=qb
+BUILD_DIR=bin
+
+.PHONY: all build test clean release
+
+all: test build
 
 build:
-	go build -o ${BINARY_NAME} ./cmd/qb/main.go
+	@mkdir -p $(BUILD_DIR)
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/pqc-cli/main.go
 
 test:
 	go test ./internal/...
 
-release-snapshot:
-	goreleaser release --snapshot --clean
-
 clean:
-	rm -f ${BINARY_NAME}
-	rm -rf dist/
+	rm -rf $(BUILD_DIR)
+	rm -f *.pqc *.decrypted *.audit inventory.json
+
+release:
+	goreleaser release --clean
