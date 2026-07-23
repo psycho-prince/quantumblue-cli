@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -10,66 +9,87 @@ import (
 	"github.com/psycho-prince/pqc-sdk/internal/policy"
 )
 
+// CBOMItem represents a detected cryptographic finding.
 type CBOMItem struct {
 	Primitive string `json:"primitive"`
 	Location  string `json:"location"`
 	Severity  string `json:"severity"`
+	Type      string `json:"type"` // e.g., "source", "binary", "config"
 }
 
-type CBOM struct {
-	Version string     `json:"version"`
-	Items   []CBOMItem `json:"items"`
+// DiscoveryScanner defines the interface for different types of discovery scans.
+type DiscoveryScanner interface {
+	Scan(path string) ([]CBOMItem, error)
 }
 
-type SimpleScanner struct {
-	fset     *token.FileSet
-	Findings []CBOMItem
+// GoScanner implements DiscoveryScanner for Go source files.
+type GoScanner struct {
+	fset *token.FileSet
 }
 
-func NewScanner() *SimpleScanner {
-	return &SimpleScanner{
-		fset:     token.NewFileSet(),
-		Findings: []CBOMItem{},
+// NewGoScanner initializes a new GoScanner.
+func NewGoScanner() *GoScanner {
+	return &GoScanner{
+		fset: token.NewFileSet(),
 	}
 }
 
-func (s *SimpleScanner) ScanFile(path string) error {
+// Scan inspects a Go file for potential crypto-related calls and imports.
+func (s *GoScanner) Scan(path string) ([]CBOMItem, error) {
+	findings := []CBOMItem{}
 	node, err := parser.ParseFile(s.fset, path, nil, parser.ParseComments)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
+		// Detect Imports
+		if imp, ok := n.(*ast.ImportSpec); ok {
+			importPath := imp.Path.Value
+			if contains(importPath, "crypto/") {
+				findings = append(findings, CBOMItem{
+					Primitive: importPath,
+					Location:  s.fset.Position(imp.Pos()).String(),
+					Severity:  "info",
+					Type:      "source",
+				})
+			}
+		}
+
+		// Detect Calls
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
 
 		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-			if sel.Sel.Name == "New" {
-				primitive := fmt.Sprintf("%v", sel.X)
-				p := policy.DefaultPolicy()
-				severity := "medium"
-				if p.IsForbidden(primitive) {
-					severity = "CRITICAL"
-				}
+			primitive := fmt.Sprintf("%v", sel.X)
+			
+			p := policy.DefaultPolicy()
+			severity := p.GetSeverity(primitive)
 
-				s.Findings = append(s.Findings, CBOMItem{
-					Primitive: primitive,
-					Location:  s.fset.Position(call.Pos()).String(),
-					Severity:  severity,
-				})
-			}
+			findings = append(findings, CBOMItem{
+				Primitive: primitive + "." + sel.Sel.Name,
+				Location:  s.fset.Position(call.Pos()).String(),
+				Severity:  severity,
+				Type:      "source",
+			})
 		}
 		return true
 	})
-	return nil
+	return findings, nil
 }
 
-func (s *SimpleScanner) GenerateCBOM() ([]byte, error) {
-	cbom := CBOM{
-		Version: "1.0",
-		Items:   s.Findings,
+func contains(s, substr string) bool {
+	if len(s) < len(substr) {
+		return false
 	}
-	return json.MarshalIndent(cbom, "", "  ")
+	// Simplified check: just check if the string contains the substring.
+	// This avoids manual indexing issues.
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

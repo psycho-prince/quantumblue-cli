@@ -1,11 +1,12 @@
-# .goreleaser.yaml
+version: 2
+project_name: quantumblue-cli
 before:
   hooks:
     - go mod tidy
 builds:
   - id: qb
+    main: ./cmd/pqc-cli/main.go
     binary: qb
-    main: ./cmd/qb
     goos:
       - linux
       - darwin
@@ -16,14 +17,11 @@ builds:
 archives:
   - format: tar.gz
     name_template: >-
-      {{ .ProjectName }}_
-      {{ .Version }}_
-      {{ .Os }}_
-      {{ .Arch }}
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ .Tag }}-snapshot"
+  name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:

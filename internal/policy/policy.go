@@ -1,22 +1,41 @@
 package policy
 
-// Policy defines forbidden cryptographic primitives
+import "strings"
+
+// Severity levels
+const (
+	SeverityCritical = "CRITICAL"
+	SeverityHigh     = "HIGH"
+	SeverityMedium   = "MEDIUM"
+	SeverityLow      = "LOW"
+)
+
+// Policy defines cryptographic primitive risk levels.
 type Policy struct {
-	Forbidden []string
+	RiskLevels map[string]string
 }
 
 func DefaultPolicy() *Policy {
 	return &Policy{
-		Forbidden: []string{"md5", "des", "rc4"},
+		RiskLevels: map[string]string{
+			"md5":      SeverityCritical,
+			"des":      SeverityCritical,
+			"rc4":      SeverityCritical,
+			"sha1":     SeverityHigh,
+			"rsa-1024": SeverityHigh,
+			"tls1.0":   SeverityHigh,
+			"tls1.1":   SeverityHigh,
+		},
 	}
 }
 
-// IsForbidden checks if a primitive is in the forbidden list
-func (p *Policy) IsForbidden(primitive string) bool {
-	for _, f := range p.Forbidden {
-		if f == primitive {
-			return true
+// GetSeverity returns the risk level for a primitive, defaulting to MEDIUM.
+func (p *Policy) GetSeverity(primitive string) string {
+	lower := strings.ToLower(primitive)
+	for pattern, severity := range p.RiskLevels {
+		if strings.Contains(lower, pattern) {
+			return severity
 		}
 	}
-	return false
+	return SeverityMedium
 }

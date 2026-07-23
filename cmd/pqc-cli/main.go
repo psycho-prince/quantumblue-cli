@@ -9,7 +9,8 @@ import (
 	"github.com/psycho-prince/pqc-sdk/internal/crypto"
 	"github.com/psycho-prince/pqc-sdk/internal/daemon"
 	"github.com/psycho-prince/pqc-sdk/internal/api"
-	"github.com/psycho-prince/pqc-sdk/internal/ai"
+	"github.com/psycho-prince/pqc-sdk/internal/audit"
+	"github.com/psycho-prince/pqc-sdk/internal/transform"
 	"github.com/psycho-prince/pqc-sdk/internal/rag"
 	"github.com/psycho-prince/pqc-sdk/internal/orchestrator"
 	"github.com/psycho-prince/pqc-sdk/internal/analyzer"
@@ -30,10 +31,17 @@ func main() {
 
 	classicSecret := []byte("X25519-HYBRID-SECRET-2026")
 
+	// Initialize Audit Logger
+	auditLogger, err := audit.NewAuditLogger("quantumblue.audit")
+	if err != nil {
+		log.Fatalf("Failed to initialize audit logger: %v", err)
+	}
+
 	// Initialize PQC Pipeline components
-	aiClient := ai.NewOpenAIClient()
+	// aiClient := ai.NewOpenAIClient() // REPLACED
+	transformer := transform.NewRuleBasedTransformer()
 	vectorStore, _ := rag.NewVectorStore("pqc.db")
-	pipeline := &orchestrator.Pipeline{AIClient: aiClient, VectorStore: vectorStore}
+	pipeline := &orchestrator.Pipeline{Transformer: transformer}
 	defer vectorStore.Close()
 
 	switch *mode {
@@ -49,6 +57,7 @@ func main() {
 		pk, sk, _ := crypto.GenerateIdentityKeyPair()
 		os.WriteFile(*pkDSA, pk, 0644)
 		os.WriteFile(*skDSA, sk, 0600)
+		auditLogger.LogEvent("IDENTITY_GEN", fmt.Sprintf("Identity keys generated: %s, %s", *pkDSA, *skDSA))
 		fmt.Printf("🧿 ML-DSA-65 Identity Generated: %s, %s\n", *pkDSA, *skDSA)
 
 	case "seal":
@@ -60,7 +69,11 @@ func main() {
 		if err != nil { log.Fatal("Missing identity key. Run -mode=identity first.") }
 		out := *file + ".pqc"
 		err = crypto.SealSignedStream(*file, out, pkK, skD, classicSecret)
-		if err != nil { log.Fatalf("Seal failed: %v", err) }
+		if err != nil { 
+			auditLogger.LogEvent("SEAL_FAIL", fmt.Sprintf("File: %s, Error: %v", *file, err))
+			log.Fatalf("Seal failed: %v", err) 
+		}
+		auditLogger.LogEvent("SEAL_SUCCESS", fmt.Sprintf("File: %s, Out: %s", *file, out))
 		fmt.Printf("🔒 Signed & Sealed: %s\n", out)
 		go api.SyncAsset(*file, out)
 
@@ -70,7 +83,11 @@ func main() {
 		pkD, _ := os.ReadFile(*pkDSA)
 		out := *file + ".decrypted"
 		err := crypto.UnsealSignedStream(*file, out, skK, pkD, classicSecret)
-		if err != nil { log.Fatalf("Unseal failed: %v", err) }
+		if err != nil { 
+			auditLogger.LogEvent("UNSEAL_FAIL", fmt.Sprintf("File: %s, Error: %v", *file, err))
+			log.Fatalf("Unseal failed: %v", err) 
+		}
+		auditLogger.LogEvent("UNSEAL_SUCCESS", fmt.Sprintf("File: %s, Out: %s", *file, out))
 		fmt.Printf("🔓 Verified & Decrypted: %s\n", out)
 
 	case "daemon":
