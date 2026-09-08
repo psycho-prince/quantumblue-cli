@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/psycho-prince/pqc-sdk/internal/crypto"
+	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 )
 
 // StartServer initializes the HTTP daemon exposing PQC operations
@@ -109,6 +111,64 @@ func StartServer(port, dsn string) error {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"organization": orgID,
 			"valid":        valid,
+		})
+	})
+
+	// /v1/cbom
+	http.HandleFunc("/v1/cbom", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			FilePath   string `json:"file_path"`
+			SourceCode string `json:"source_code"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		s := scanner.NewGoScanner()
+		var findings []scanner.CBOMItem
+		var scanErr error
+
+		if req.SourceCode != "" {
+			// Write to temp file
+			tmpfile, err := os.CreateTemp("", "scan-*.go")
+			if err != nil {
+				http.Error(w, "Failed to create temp file", http.StatusInternalServerError)
+				return
+			}
+			defer os.Remove(tmpfile.Name())
+			if _, err := tmpfile.Write([]byte(req.SourceCode)); err != nil {
+				http.Error(w, "Failed to write temp file", http.StatusInternalServerError)
+				return
+			}
+			tmpfile.Close()
+			findings, scanErr = s.Scan(tmpfile.Name())
+		} else if req.FilePath != "" {
+			findings, scanErr = s.Scan(req.FilePath)
+		} else {
+			http.Error(w, "Must provide file_path or source_code", http.StatusBadRequest)
+			return
+		}
+
+		if scanErr != nil {
+			http.Error(w, fmt.Sprintf("Scan failed: %v", scanErr), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"organization": orgID,
+			"cbom":         findings,
 		})
 	})
 
