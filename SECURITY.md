@@ -7,7 +7,7 @@ We take the security of our cryptographic tools and legal-tech infrastructure ve
 ### Reporting Process
 Please do not report security vulnerabilities through public GitHub issues. Instead, send an email to:
 
-**[INSERT CONTACT EMAIL]**
+**[info@quantum-blue.in]**
 
 We will acknowledge receipt of your report within 48 hours and work with you to understand and mitigate the vulnerability.
 
