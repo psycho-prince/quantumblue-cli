@@ -9,7 +9,14 @@ import (
 )
 
 // StartServer initializes the HTTP daemon exposing PQC operations
-func StartServer(port string) error {
+func StartServer(port, dsn string) error {
+	if dsn != "" {
+		if err := InitDB(dsn); err != nil {
+			return fmt.Errorf("database initialization failed: %w", err)
+		}
+		fmt.Println("Connected to unified PostgreSQL database")
+	}
+
 	http.HandleFunc("/scan", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Scan triggered remotely\n")
 	})
@@ -18,6 +25,11 @@ func StartServer(port string) error {
 	http.HandleFunc("/v1/keys", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -29,8 +41,9 @@ func StartServer(port string) error {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"public_key":  pkBytes,
-			"private_key": skBytes, // Note: In production this should be kept in HSM/KMS
+			"organization": orgID,
+			"public_key":   pkBytes,
+			"private_key":  skBytes, // Note: In production this should be kept in HSM/KMS
 		})
 	})
 
@@ -38,6 +51,11 @@ func StartServer(port string) error {
 	http.HandleFunc("/v1/sign", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -58,7 +76,8 @@ func StartServer(port string) error {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"signature": signature,
+			"organization": orgID,
+			"signature":    signature,
 		})
 	})
 
@@ -66,6 +85,11 @@ func StartServer(port string) error {
 	http.HandleFunc("/v1/verify", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -83,7 +107,8 @@ func StartServer(port string) error {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"valid": valid,
+			"organization": orgID,
+			"valid":        valid,
 		})
 	})
 

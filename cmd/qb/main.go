@@ -36,7 +36,8 @@ func main() {
 			fmt.Println("Usage: qb daemon <port>")
 			return
 		}
-		err := server.StartServer(os.Args[2])
+		dsn := os.Getenv("DATABASE_URL")
+		err := server.StartServer(os.Args[2], dsn)
 		if err != nil {
 			fmt.Printf("Error starting daemon: %v\n", err)
 		}

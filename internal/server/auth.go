@@ -1,0 +1,57 @@
+package server
+
+import (
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strings"
+
+	_ "github.com/lib/pq"
+)
+
+var db *sql.DB
+
+// InitDB connects to the unified PostgreSQL database
+func InitDB(dsn string) error {
+	var err error
+	db, err = sql.Open("postgres", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to connect to db: %w", err)
+	}
+	return db.Ping()
+}
+
+// authenticate extracts the Bearer token, hashes it, and queries Prisma's ApiKey table
+func authenticate(r *http.Request) (string, error) {
+	if db == nil {
+		// If DB isn't initialized, we bypass auth for local CLI testing.
+		return "local-cli", nil
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", fmt.Errorf("missing Authorization header")
+	}
+
+	var rawKey string
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		rawKey = strings.TrimPrefix(authHeader, "Bearer ")
+	} else {
+		rawKey = authHeader
+	}
+
+	hash := sha256.New()
+	hash.Write([]byte(rawKey))
+	hashedKey := hex.EncodeToString(hash.Sum(nil))
+
+	var orgID string
+	query := `SELECT "organizationId" FROM "ApiKey" WHERE "keyHash" = $1 AND "revokedAt" IS NULL`
+	err := db.QueryRow(query, hashedKey).Scan(&orgID)
+	if err != nil {
+		return "", fmt.Errorf("invalid or revoked API key")
+	}
+
+	return orgID, nil
+}

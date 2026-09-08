@@ -2,6 +2,8 @@ github.com/cloudflare/circl v1.6.4 h1:pOXuDTCEYyzydgUpQ0CQz3LsinKjiSk6nNP5Lt5K64
 github.com/cloudflare/circl v1.6.4/go.mod h1:YxarevkLlbaHuWsxG6vmYNWBEsSp4pnp7j+4VljMavY=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
+github.com/lib/pq v1.12.3 h1:tTWxr2YLKwIvK90ZXEw8GP7UFHtcbTtty8zsI+YjrfQ=
+github.com/lib/pq v1.12.3/go.mod h1:/p+8NSbOcwzAEI7wiMXFlgydTwcgTr3OSKMsD2BitpA=
 github.com/mattn/go-sqlite3 v1.14.48 h1:7XHIgl0a8HwOaiK4E47ozLkST78rR9+OtNGx27D/TFs=
 github.com/mattn/go-sqlite3 v1.14.48/go.mod h1:6JTjA44L93a0QCyJef5YvlPoKXntQPjzWv5gtm9sB6w=
 github.com/openai/openai-go v1.12.0 h1:NBQCnXzqOTv5wsgNC36PrFEiskGfO5wccfCWDo9S1U0=
