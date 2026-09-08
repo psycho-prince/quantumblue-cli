@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -54,4 +55,23 @@ func authenticate(r *http.Request) (string, error) {
 	}
 
 	return orgID, nil
+}
+
+// LogAuditEvent records a security-critical event directly to Postgres
+func LogAuditEvent(orgID, action string, details map[string]interface{}) {
+	if db == nil {
+		// If DB isn't initialized, skip
+		return
+	}
+	
+	detailsBytes, err := json.Marshal(details)
+	if err != nil {
+		return
+	}
+
+	query := `INSERT INTO "AuditEvent" ("id", "organizationId", "action", "details", "createdAt") VALUES (gen_random_uuid(), $1, $2, $3, NOW())`
+	_, err = db.Exec(query, orgID, action, string(detailsBytes))
+	if err != nil {
+		fmt.Printf("Failed to log audit event: %v\n", err)
+	}
 }

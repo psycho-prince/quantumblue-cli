@@ -41,6 +41,10 @@ func StartServer(port, dsn string) error {
 			return
 		}
 
+		LogAuditEvent(orgID, "GENERATE_KEYPAIR", map[string]interface{}{
+			"algorithm": "ML-DSA-65",
+		})
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"organization": orgID,
@@ -76,6 +80,10 @@ func StartServer(port, dsn string) error {
 			return
 		}
 
+		LogAuditEvent(orgID, "SIGN_ENVELOPE", map[string]interface{}{
+			"data_length": len(req.Data),
+		})
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"organization": orgID,
@@ -106,6 +114,11 @@ func StartServer(port, dsn string) error {
 		}
 
 		valid := crypto.VerifyEnvelope(req.Data, req.Signature, req.PublicKey)
+
+		LogAuditEvent(orgID, "VERIFY_ENVELOPE", map[string]interface{}{
+			"data_length": len(req.Data),
+			"is_valid":    valid,
+		})
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -164,6 +177,10 @@ func StartServer(port, dsn string) error {
 			http.Error(w, fmt.Sprintf("Scan failed: %v", scanErr), http.StatusInternalServerError)
 			return
 		}
+
+		LogAuditEvent(orgID, "GENERATE_CBOM", map[string]interface{}{
+			"findings_count": len(findings),
+		})
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
