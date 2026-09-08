@@ -21,18 +21,16 @@ func main() {
 			fmt.Println("Usage: qb scan <file.go>")
 			return
 		}
-		s := scanner.NewScanner()
-		err := s.ScanFile(os.Args[2])
+		s := scanner.NewGoScanner()
+		findings, err := s.Scan(os.Args[2])
 		if err != nil {
 			fmt.Printf("Error scanning file: %v\n", err)
 			return
 		}
-		cbom, err := s.GenerateCBOM()
-		if err != nil {
-			fmt.Printf("Error generating CBOM: %v\n", err)
-			return
+		// For now just print findings
+		for _, f := range findings {
+			fmt.Printf("Found: %s at %s\n", f.Primitive, f.Location)
 		}
-		fmt.Println(string(cbom))
 	case "daemon":
 		if len(os.Args) < 3 {
 			fmt.Println("Usage: qb daemon <port>")
