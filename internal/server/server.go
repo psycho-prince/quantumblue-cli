@@ -23,6 +23,14 @@ func StartServer(port, dsn string) error {
 		fmt.Fprintf(w, "Scan triggered remotely\n")
 	})
 
+	// /health
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "ok",
+		})
+	})
+
 	// /v1/keys
 	http.HandleFunc("/v1/keys", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
