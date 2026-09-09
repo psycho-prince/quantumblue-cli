@@ -28,7 +28,7 @@ func NewConfigScanner() *ConfigScanner {
 // Scan inspects a file for cryptographic configuration patterns.
 func (s *ConfigScanner) Scan(path string) ([]CBOMItem, error) {
 	findings := []CBOMItem{}
-	p := policy.DefaultPolicy()
+	p := policy.DefaultQuantumRiskPolicy()
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -41,13 +41,14 @@ func (s *ConfigScanner) Scan(path string) ([]CBOMItem, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		for _, pattern := range s.patterns {
-			if pattern.MatchString(line) {
-				primitive := pattern.String()
+			if match := pattern.FindStringSubmatch(line); match != nil {
+				severity, qStatus := p.GetRisk(match[0])
 				findings = append(findings, CBOMItem{
-					Primitive: primitive,
-					Location:  fmt.Sprintf("%s:%d", path, lineNumber),
-					Severity:  p.GetSeverity(primitive),
-					Type:      "config",
+					Primitive:     match[0],
+					Location:      fmt.Sprintf("%s:%d", path, lineNumber),
+					Severity:      severity,
+					QuantumStatus: qStatus,
+					Type:          "configuration_cipher",
 				})
 			}
 		}

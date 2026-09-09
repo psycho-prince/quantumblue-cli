@@ -26,3 +26,17 @@ __pycache__/
 # Sensitive Keys
 *.pk
 *.sk
+keys.json
+priv.key
+pub.key
+signature.sig
+transaction.json
+*.key
+qb
+quantumblue
+keys.json
+priv.key
+pub.key
+signature.sig
+transaction.json
+pqc.db

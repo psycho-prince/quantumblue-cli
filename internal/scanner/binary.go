@@ -3,6 +3,8 @@ package scanner
 import (
 	"debug/elf"
 	"os"
+
+	"github.com/psycho-prince/pqc-sdk/internal/policy"
 )
 
 // BinaryScanner implements DiscoveryScanner for compiled binaries.
@@ -41,11 +43,14 @@ func (s *BinaryScanner) Scan(path string) ([]CBOMItem, error) {
 	for _, sym := range syms {
 		// Look for crypto-related symbol names
 		if isCryptoSymbol(sym.Name) {
+			pol := policy.DefaultQuantumRiskPolicy()
+			severity, qStatus := pol.GetRisk(sym.Name)
 			findings = append(findings, CBOMItem{
-				Primitive: sym.Name,
-				Location:  path,
-				Severity:  "medium",
-				Type:      "binary",
+				Primitive:     sym.Name,
+				Location:      path,
+				Severity:      severity,
+				QuantumStatus: qStatus,
+				Type:          "binary",
 			})
 		}
 	}
