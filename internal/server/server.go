@@ -19,9 +19,6 @@ func StartServer(port, dsn string) error {
 		fmt.Println("Connected to unified PostgreSQL database")
 	}
 
-	http.HandleFunc("/scan", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Scan triggered remotely\n")
-	})
 
 	// /health
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -43,11 +40,15 @@ func StartServer(port, dsn string) error {
 			return
 		}
 
-		pkBytes, skBytes, err := crypto.GenerateIdentityKeyPair()
+		provider := crypto.NewFileKeyProvider("")
+		err = provider.GenerateKey(orgID)
 		if err != nil {
 			http.Error(w, "Failed to generate keys", http.StatusInternalServerError)
 			return
 		}
+		
+		// We can read public key to return it
+		pkBytes, _ := os.ReadFile(orgID + ".pub")
 
 		LogAuditEvent(orgID, "GENERATE_KEYPAIR", map[string]interface{}{
 			"algorithm": "ML-DSA-65",
@@ -57,7 +58,6 @@ func StartServer(port, dsn string) error {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"organization": orgID,
 			"public_key":   pkBytes,
-			"private_key":  skBytes, // Note: In production this should be kept in HSM/KMS
 		})
 	})
 
@@ -74,17 +74,17 @@ func StartServer(port, dsn string) error {
 		}
 
 		var req struct {
-			Data       []byte `json:"data"`
-			PrivateKey []byte `json:"private_key"`
+			Data []byte `json:"data"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request", http.StatusBadRequest)
 			return
 		}
 
-		signature, err := crypto.SignEnvelope(req.Data, req.PrivateKey)
+		provider := crypto.NewFileKeyProvider("")
+		signature, err := provider.Sign(orgID, req.Data)
 		if err != nil {
-			http.Error(w, "Signing failed", http.StatusInternalServerError)
+			http.Error(w, "Signing failed: key not found or error", http.StatusInternalServerError)
 			return
 		}
 

@@ -27,8 +27,7 @@ func InitDB(dsn string) error {
 // authenticate extracts the Bearer token, hashes it, and queries Prisma's ApiKey table
 func authenticate(r *http.Request) (string, error) {
 	if db == nil {
-		// If DB isn't initialized, we bypass auth for local CLI testing.
-		return "local-cli", nil
+		return "", fmt.Errorf("database not initialized, authentication unavailable")
 	}
 
 	authHeader := r.Header.Get("Authorization")
@@ -37,11 +36,10 @@ func authenticate(r *http.Request) (string, error) {
 	}
 
 	var rawKey string
-	if strings.HasPrefix(authHeader, "Bearer ") {
-		rawKey = strings.TrimPrefix(authHeader, "Bearer ")
-	} else {
-		rawKey = authHeader
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", fmt.Errorf("invalid Authorization header format")
 	}
+	rawKey = strings.TrimPrefix(authHeader, "Bearer ")
 
 	hash := sha256.New()
 	hash.Write([]byte(rawKey))

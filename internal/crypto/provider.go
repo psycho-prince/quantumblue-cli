@@ -69,7 +69,18 @@ func (p *FileKeyProvider) Destroy(id string) error {
 	// Zero out file
 	info, err := os.Stat(path)
 	if err == nil {
-		zeros := make([]byte, info.Size())
+		size := info.Size()
+		
+		// Pass 1: All zeros
+		zeros := make([]byte, size)
+		_ = os.WriteFile(path, zeros, 0600)
+		
+		// Pass 2: All ones
+		ones := make([]byte, size)
+		for i := range ones { ones[i] = 0xFF }
+		_ = os.WriteFile(path, ones, 0600)
+		
+		// Pass 3: Pseudo-random (or just zeros again to clear)
 		_ = os.WriteFile(path, zeros, 0600)
 	}
 	
