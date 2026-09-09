@@ -3,11 +3,14 @@
   "version": "2.0.1",
   "description": "Sovereign PQC Notary - Gold Standard v2.0.0",
   "main": "dist/cli.js",
+  "type": "module",
   "bin": {
     "quantumblue": "dist/cli.js"
   },
   "scripts": {
     "build": "go build -o quantumblue ./cmd/pqc-cli",
+    "build:ts": "tsc",
+    "prepack": "npm run build:ts && chmod +x dist/cli.js",
     "test": "go test ./..."
   },
   "keywords": [
@@ -20,5 +23,16 @@
   ],
   "author": "Prince <prince.philip@quantum-blue.in>",
   "homepage": "https://quantum-blue.in",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@noble/post-quantum": "^0.7.1",
+    "@sinclair/typebox": "^0.34.52",
+    "commander": "^15.0.0"
+  }
 }

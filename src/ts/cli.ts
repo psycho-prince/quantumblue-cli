@@ -23,7 +23,7 @@ import { getAutonomyLevel } from './config.js';
 import { isActionAllowed, resolveSafePath } from './policy.js';
 
 const require = createRequire(import.meta.url);
-const pkg = require('../../package.json');
+const pkg = require('../package.json');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
