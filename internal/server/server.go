@@ -34,6 +34,7 @@ func StartServer(port, dsn string) error {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 		orgID, err := authenticate(r)
 		if err != nil {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
@@ -67,6 +68,7 @@ func StartServer(port, dsn string) error {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 		orgID, err := authenticate(r)
 		if err != nil {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
@@ -105,6 +107,7 @@ func StartServer(port, dsn string) error {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 		orgID, err := authenticate(r)
 		if err != nil {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
@@ -141,6 +144,7 @@ func StartServer(port, dsn string) error {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 		orgID, err := authenticate(r)
 		if err != nil {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)

@@ -13,8 +13,14 @@ func GenerateIdentityKeyPair() (pkBytes, skBytes []byte, err error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("ML-DSA keygen failed: %w", err)
 	}
-	pkBytes, _ = pk.MarshalBinary()
-	skBytes, _ = sk.MarshalBinary()
+	pkBytes, err = pk.MarshalBinary()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal public key: %w", err)
+	}
+	skBytes, err = sk.MarshalBinary()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal private key: %w", err)
+	}
 	return pkBytes, skBytes, nil
 }
 

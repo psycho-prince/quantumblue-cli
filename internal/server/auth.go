@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -57,19 +58,19 @@ func authenticate(r *http.Request) (string, error) {
 
 // LogAuditEvent records a security-critical event directly to Postgres
 func LogAuditEvent(orgID, action string, details map[string]interface{}) {
-	if db == nil {
-		// If DB isn't initialized, skip
-		return
-	}
-	
 	detailsBytes, err := json.Marshal(details)
 	if err != nil {
 		return
 	}
 
+	if db == nil {
+		fmt.Fprintf(os.Stderr, "[AUDIT FALLBACK] Action: %s, Org: %s, Details: %s\n", action, orgID, string(detailsBytes))
+		return
+	}
+
 	query := `INSERT INTO "AuditEvent" ("id", "organizationId", "action", "details", "createdAt") VALUES (gen_random_uuid(), $1, $2, $3, NOW())`
-	_, err = db.Exec(query, orgID, action, string(detailsBytes))
+	_, err = db.Exec(query, orgID, action, detailsBytes)
 	if err != nil {
-		fmt.Printf("Failed to log audit event: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to log audit event: %v\n", err)
 	}
 }
