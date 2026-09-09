@@ -184,6 +184,23 @@ func main() {
 				os.Exit(1)
 			}
 			fmt.Printf("Key Data: %x\n", keyData)
+		} else if os.Args[2] == "generate" {
+			genCmd := flag.NewFlagSet("generate", flag.ExitOnError)
+			keyID := genCmd.String("key-id", "", "ID of the key to generate")
+			genCmd.Parse(os.Args[3:])
+			
+			if *keyID == "" {
+				fmt.Println("Usage: qb key generate --key-id=<id>")
+				return
+			}
+			
+			provider := crypto.NewFileKeyProvider(".")
+			err := provider.GenerateKey(*keyID)
+			if err != nil {
+				fmt.Printf("Error generating key: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Generated key: %s\n", *keyID)
 		} else {
 			fmt.Println("Unknown key subcommand")
 		}

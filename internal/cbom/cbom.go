@@ -44,7 +44,13 @@ type Component struct {
 	Type             string            `json:"type"`
 	BOMRef           string            `json:"bom-ref,omitempty"`
 	Name             string            `json:"name"`
+	Properties       []Property        `json:"properties,omitempty"`
 	CryptoProperties *CryptoProperties `json:"cryptoProperties,omitempty"`
+}
+
+type Property struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 type CryptoProperties struct {
@@ -57,7 +63,7 @@ type AlgorithmProperties struct {
 	Curve                    string `json:"curve,omitempty"`
 	KeyLength                int    `json:"keyLength,omitempty"`
 	Padding                  string `json:"padding,omitempty"`
-	NistQuantumSecurityLevel int    `json:"nistQuantumSecurityLevel,omitempty"`
+	NistQuantumSecurityLevel *int   `json:"nistQuantumSecurityLevel,omitempty"`
 }
 
 // NewCBOM creates a new, populated CBOM structure in CycloneDX 1.6 format.
@@ -69,36 +75,53 @@ func NewCBOM(assets []Asset) *CBOM {
 			severity, qStatus := pol.GetRisk(f.Primitive)
 			
 			level := 1
+			eval := "quantum-vulnerable"
 			
 			if qStatus == "compliant" || severity == "LOW" {
 				level = 3
-			} else if severity == "CRITICAL" {
+				eval = "fips-approved"
+			} else if severity == "CRITICAL" || severity == "policy-violation" {
 				level = 0
-			} else if severity == "HIGH" {
+				eval = "not-approved"
+			} else if severity == "HIGH" || severity == "quantum-vulnerable" {
 				level = 1
+				eval = "quantum-vulnerable"
 			}
 
+			assetType := "algorithm"
 			pType := "unknown"
-			if strings.Contains(f.Primitive, "md5") || strings.Contains(f.Primitive, "sha") {
+			primitiveLower := strings.ToLower(f.Primitive)
+			
+			if strings.Contains(primitiveLower, "tls") {
+				assetType = "protocol"
+			} else if strings.Contains(primitiveLower, "md5") || strings.Contains(primitiveLower, "sha") {
 				pType = "hash"
-			} else if strings.Contains(f.Primitive, "rsa") || strings.Contains(f.Primitive, "ecdsa") || strings.Contains(f.Primitive, "ed25519") {
+			} else if strings.Contains(primitiveLower, "rsa") || strings.Contains(primitiveLower, "ecdsa") || strings.Contains(primitiveLower, "ed25519") {
 				pType = "signature"
-			} else if strings.Contains(f.Primitive, "des") || strings.Contains(f.Primitive, "aes") {
+			} else if strings.Contains(primitiveLower, "des") || strings.Contains(primitiveLower, "aes") {
 				pType = "block-cipher"
-			} else if strings.Contains(f.Primitive, "ecdh") {
+			} else if strings.Contains(primitiveLower, "ecdh") {
 				pType = "key-agree"
+			}
+
+			var algoProps *AlgorithmProperties
+			if assetType == "algorithm" {
+				algoProps = &AlgorithmProperties{
+					Primitive:                pType,
+					NistQuantumSecurityLevel: &level,
+				}
 			}
 
 			components = append(components, Component{
 				Type:   "cryptographic-asset",
 				BOMRef: fmt.Sprintf("%s-%s", f.Primitive, f.Location),
 				Name:   f.Primitive,
+				Properties: []Property{
+					{Name: "nistQuantumEvaluation", Value: eval},
+				},
 				CryptoProperties: &CryptoProperties{
-					AssetType: "algorithm",
-					AlgorithmProperties: &AlgorithmProperties{
-						Primitive: pType,
-						NistQuantumSecurityLevel: level,
-					},
+					AssetType:           assetType,
+					AlgorithmProperties: algoProps,
 				},
 			})
 		}
