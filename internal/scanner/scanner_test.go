@@ -7,7 +7,7 @@ import (
 func TestScanFile(t *testing.T) {
 	// Need a dummy file for scanning
 	// This will test the scanner's basic functionality
-	s := NewScanner()
+	s := NewGoScanner()
 	// This should fail to parse, returning an error, or we provide a valid temp file
     // For simplicity here, verifying the struct initializes
     if s == nil {

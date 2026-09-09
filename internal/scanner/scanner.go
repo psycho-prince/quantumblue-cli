@@ -11,10 +11,11 @@ import (
 
 // CBOMItem represents a detected cryptographic finding.
 type CBOMItem struct {
-	Primitive string `json:"primitive"`
-	Location  string `json:"location"`
-	Severity  string `json:"severity"`
-	Type      string `json:"type"` // e.g., "source", "binary", "config"
+	Primitive     string `json:"primitive"`
+	Location      string `json:"location"`
+	Severity      string `json:"severity"`
+	QuantumStatus string `json:"quantum_status"`
+	Type          string `json:"type"` // e.g., "source", "binary", "config"
 }
 
 // DiscoveryScanner defines the interface for different types of discovery scans.
@@ -65,14 +66,15 @@ func (s *GoScanner) Scan(path string) ([]CBOMItem, error) {
 		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 			primitive := fmt.Sprintf("%v", sel.X)
 			
-			p := policy.DefaultPolicy()
-			severity := p.GetSeverity(primitive)
+			pol := policy.DefaultQuantumRiskPolicy()
+			severity, qStatus := pol.GetRisk(primitive)
 
 			findings = append(findings, CBOMItem{
-				Primitive: primitive + "." + sel.Sel.Name,
-				Location:  s.fset.Position(call.Pos()).String(),
-				Severity:  severity,
-				Type:      "source",
+				Primitive:     primitive + "." + sel.Sel.Name,
+				Location:      s.fset.Position(call.Pos()).String(),
+				Severity:      severity,
+				QuantumStatus: qStatus,
+				Type:          "method_call",
 			})
 		}
 		return true

@@ -1,13 +1,14 @@
 package test
 
 import (
-	"crypto/aes"
+	"crypto/des"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/rsa"
 )
 
 func main() {
-	h := md5.New()
-	block, _ := aes.NewCipher([]byte("key"))
-	key, _ := rsa.GenerateKey(nil, 2048)
+	_ = md5.New()
+	_, _ = des.NewCipher(make([]byte, 8))
+	_, _ = rsa.GenerateKey(rand.Reader, 2048)
 }
