@@ -1,0 +1,35 @@
+- id: rsa-key-exchange-lt-3072
+  match:
+    primitive: RSA
+    role: key_exchange
+    keyBits: { lt: 3072 }
+  quantumStatus: vulnerable
+  baseSeverity: high
+  rationale: >
+    RSA key exchange is broken by Shor's algorithm and is subject to
+    harvest-now-decrypt-later capture of recorded traffic. Keys under 3072 bits also face near-term classical computing threats.
+  references: [ "NIST IR 8547", "NIST SP 800-57" ]
+  migration: hybrid-kem
+
+- id: rsa-key-exchange-geq-3072
+  match:
+    primitive: RSA
+    role: key_exchange
+  quantumStatus: vulnerable
+  baseSeverity: medium
+  rationale: >
+    RSA key exchange is broken by Shor's algorithm and is subject to
+    harvest-now-decrypt-later capture of recorded traffic.
+  references: [ "NIST IR 8547" ]
+  migration: hybrid-kem
+
+- id: rsa-signature
+  match:
+    primitive: RSA
+    role: signature
+  quantumStatus: vulnerable
+  baseSeverity: low
+  rationale: >
+    RSA signatures are broken by Shor's algorithm. However, unlike key exchange, past signatures cannot be retroactively forged to decrypt stored data, reducing immediate urgency.
+  references: [ "NIST IR 8547" ]
+  migration: ml-dsa

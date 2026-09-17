@@ -1,0 +1,22 @@
+- id: ecdsa-signature
+  match:
+    primitive: ECDSA
+    role: signature
+  quantumStatus: vulnerable
+  baseSeverity: low
+  rationale: >
+    Elliptic Curve signatures are broken by Shor's algorithm. Forgery allows impersonation but not decryption of past traffic.
+  references: [ "NIST IR 8547" ]
+  migration: ml-dsa
+
+- id: ecdh-key-exchange
+  match:
+    primitive: ECDH
+    role: key_exchange
+  quantumStatus: vulnerable
+  baseSeverity: high
+  rationale: >
+    Elliptic Curve key exchange is broken by Shor's algorithm and is subject to
+    harvest-now-decrypt-later capture of recorded traffic.
+  references: [ "NIST IR 8547" ]
+  migration: hybrid-kem

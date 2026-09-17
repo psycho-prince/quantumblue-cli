@@ -1,0 +1,19 @@
+- id: ml-dsa-signature
+  match:
+    primitive: ML-DSA-65
+    role: signature
+  quantumStatus: resistant
+  baseSeverity: informational
+  rationale: >
+    FIPS 204 standardized post-quantum signature algorithm.
+  references: [ "FIPS 204" ]
+
+- id: ml-kem-key-exchange
+  match:
+    primitive: ML-KEM-768
+    role: key_exchange
+  quantumStatus: resistant
+  baseSeverity: informational
+  rationale: >
+    FIPS 203 standardized post-quantum key encapsulation mechanism.
+  references: [ "FIPS 203" ]
