@@ -9,20 +9,26 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var (
+	db     *sql.DB
+	dbOnce sync.Once
+)
 
 // InitDB connects to the unified PostgreSQL database
 func InitDB(dsn string) error {
 	var err error
-	db, err = sql.Open("postgres", dsn)
-	if err != nil {
-		return fmt.Errorf("failed to connect to db: %w", err)
-	}
-	return db.Ping()
+	dbOnce.Do(func() {
+		db, err = sql.Open("postgres", dsn)
+		if err == nil {
+			err = db.Ping()
+		}
+	})
+	return err
 }
 
 // authenticate extracts the Bearer token, hashes it, and queries Prisma's ApiKey table
