@@ -10,4 +10,5 @@ type ApiKey struct {
     KeyHash string `json:"keyHash" db:"keyHash"`
     Label string `json:"label" db:"label"`
     CreatedAt time.Time `json:"createdAt" db:"createdAt"`
+    RevokedAt *time.Time `json:"revokedAt" db:"revokedAt"`
 }

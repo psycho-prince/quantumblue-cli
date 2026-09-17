@@ -11,6 +11,7 @@ type WebhookEvent struct {
     EventId string `json:"eventId" db:"eventId"`
     EventType string `json:"eventType" db:"eventType"`
     Processed bool `json:"processed" db:"processed"`
+    ProcessedAt *time.Time `json:"processedAt" db:"processedAt"`
     CreatedAt time.Time `json:"createdAt" db:"createdAt"`
     Payload json.RawMessage `json:"payload" db:"payload"`
 }

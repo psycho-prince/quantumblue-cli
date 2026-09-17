@@ -10,6 +10,7 @@ type Asset struct {
     OrganizationId string `json:"organizationId" db:"organizationId"`
     Kind string `json:"kind" db:"kind"`
     Identifier string `json:"identifier" db:"identifier"`
+    DisplayName *string `json:"displayName" db:"displayName"`
     Source string `json:"source" db:"source"`
     Criticality string `json:"criticality" db:"criticality"`
     FirstSeenAt time.Time `json:"firstSeenAt" db:"firstSeenAt"`

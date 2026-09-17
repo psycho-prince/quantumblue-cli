@@ -14,5 +14,8 @@ type Scan struct {
     CreatedAt time.Time `json:"createdAt" db:"createdAt"`
     ScanType string `json:"scanType" db:"scanType"`
     Status string `json:"status" db:"status"`
+    StartedAt *time.Time `json:"startedAt" db:"startedAt"`
+    CompletedAt *time.Time `json:"completedAt" db:"completedAt"`
+    ErrorText *string `json:"errorText" db:"errorText"`
     RiskSummary json.RawMessage `json:"riskSummary" db:"riskSummary"`
 }
