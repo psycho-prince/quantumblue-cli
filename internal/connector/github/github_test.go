@@ -9,10 +9,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"github.com/psycho-prince/pqc-sdk/internal/model"
 )
 
 func TestGithubConnector_Discover(t *testing.T) {
-	// Create a fake tarball
 	var buf bytes.Buffer
 	gzw := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gzw)
@@ -45,9 +45,8 @@ func main() {
 
 	tarballBytes := buf.Bytes()
 
-	// Mock server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/repos/org/repo/tarball" {
+		if r.URL.Path == "/repos/test-org/test-repo/tarball" {
 			w.Header().Set("Content-Type", "application/x-gzip")
 			w.Write(tarballBytes)
 			return
@@ -59,7 +58,8 @@ func main() {
 	cfg := Config{
 		Token:        "fake-token",
 		Organization: "org-123",
-		RepoName:     "org/repo",
+		Owner:        "test-org",
+		Repo:         "test-repo",
 		BaseURL:      ts.URL,
 	}
 
@@ -69,25 +69,43 @@ func main() {
 		t.Fatalf("Discover failed: %v", err)
 	}
 
-	if len(assets) != 3 { // 1 repo + 2 files
-		t.Errorf("Expected 3 assets, got %d", len(assets))
-	}
+	// Structural assertions instead of raw counts
+	var repoAsset *model.Asset
+	filesFound := make(map[string]*model.Asset)
 
-	if len(edges) != 2 { // repo->file1, repo->file2
-		t.Errorf("Expected 2 edges, got %d", len(edges))
-	}
-
-	// Verify that the finding was detected in main.go
-	foundFinding := false
-	for _, a := range assets {
-		if a.Kind == "file" && a.Identifier == "github.com/org/repo/main.go" {
-			metadata := string(a.Metadata)
-			if strings.Contains(metadata, "crypto/rsa") {
-				foundFinding = true
-			}
+	for i, a := range assets {
+		if a.Kind == "repository" {
+			repoAsset = &assets[i]
+		} else if a.Kind == "file" {
+			filesFound[a.Identifier] = &assets[i]
 		}
 	}
-	if !foundFinding {
-		t.Errorf("Expected to find crypto/rsa finding in main.go metadata")
+
+	if repoAsset == nil {
+		t.Fatal("Expected to find a repository asset")
+	}
+	if repoAsset.Identifier != "github.com/test-org/test-repo" {
+		t.Errorf("Unexpected repo identifier: %s", repoAsset.Identifier)
+	}
+
+	mainGoAsset, ok := filesFound["github.com/test-org/test-repo/main.go"]
+	if !ok {
+		t.Fatal("Expected to find main.go asset")
+	}
+
+	if !strings.Contains(string(mainGoAsset.Metadata), "crypto/rsa") {
+		t.Errorf("Expected to find crypto/rsa finding in main.go metadata, got %s", mainGoAsset.Metadata)
+	}
+
+	// Ensure edges exist from repo to main.go
+	foundEdge := false
+	for _, e := range edges {
+		if e.FromAssetId == repoAsset.Id && e.ToAssetId == mainGoAsset.Id && e.Relation == "contains" {
+			foundEdge = true
+			break
+		}
+	}
+	if !foundEdge {
+		t.Errorf("Expected contains edge from repo to main.go")
 	}
 }

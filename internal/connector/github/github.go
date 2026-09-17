@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
 	"crypto/rand"
 	"encoding/hex"
+
 	"github.com/psycho-prince/pqc-sdk/internal/model"
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 )
@@ -22,7 +23,8 @@ import (
 type Config struct {
 	Token        string
 	Organization string
-	RepoName     string
+	Owner        string
+	Repo         string
 	BaseURL      string // For testing
 }
 
@@ -42,22 +44,38 @@ func (c *GithubConnector) Name() string {
 	return "github"
 }
 
+func generateID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
 func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.AssetEdge, error) {
+	// 1. Connector-level Entitlement Check
+	// The entitlement check is done by the caller (API layer) or via an injected policy.
+	// For now, we assume the caller has authorized it. 
+
 	var assets []model.Asset
 	var edges []model.AssetEdge
 
+	repoFullName := fmt.Sprintf("%s/%s", c.config.Owner, c.config.Repo)
 	repoAsset := model.Asset{
 		Id:             generateID(),
 		OrganizationId: c.config.Organization,
 		Kind:           "repository",
-		Identifier:     fmt.Sprintf("github.com/%s", c.config.RepoName),
+		Identifier:     fmt.Sprintf("github.com/%s", repoFullName),
 		Source:         "github",
 		Criticality:    "unknown",
 		FirstSeenAt:    time.Now(),
 		LastSeenAt:     time.Now(),
 		Active:         true,
 	}
-	repoAsset.Metadata, _ = json.Marshal(map[string]string{"name": c.config.RepoName})
+	
+	meta, err := json.Marshal(map[string]string{"name": repoFullName})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal repo metadata: %w", err)
+	}
+	repoAsset.Metadata = meta
 	assets = append(assets, repoAsset)
 
 	tmpDir, err := os.MkdirTemp("", "qb-github-")
@@ -66,9 +84,13 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Fetch tarball via REST API
-	url := fmt.Sprintf("%s/repos/%s/tarball", c.config.BaseURL, c.config.RepoName)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	u, err := url.Parse(c.config.BaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid base URL: %w", err)
+	}
+	u.Path = filepath.Join(u.Path, "repos", url.PathEscape(c.config.Owner), url.PathEscape(c.config.Repo), "tarball")
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +108,6 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 		return nil, nil, fmt.Errorf("github api error: status %d", resp.StatusCode)
 	}
 
-	// Extract tar.gz
 	gzr, err := gzip.NewReader(resp.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read gzip: %v", err)
@@ -103,8 +124,6 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 			return nil, nil, fmt.Errorf("tar error: %v", err)
 		}
 
-		// GitHub tarballs have a top-level directory like repo-name-commitsha/
-		// We skip the first directory component
 		parts := strings.SplitN(header.Name, "/", 2)
 		if len(parts) < 2 || parts[1] == "" {
 			continue
@@ -131,7 +150,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 				Id:             generateID(),
 				OrganizationId: c.config.Organization,
 				Kind:           "file",
-				Identifier:     fmt.Sprintf("github.com/%s/%s", c.config.RepoName, relPath),
+				Identifier:     fmt.Sprintf("github.com/%s/%s", repoFullName, relPath),
 				Source:         "github",
 				Criticality:    "low",
 				FirstSeenAt:    time.Now(),
@@ -148,28 +167,31 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 				CreatedAt:   time.Now(),
 			})
 
-			findingsJson := []byte("{}")
+			findingsJson := []byte("[]")
 			if strings.HasSuffix(target, ".go") {
 				goScanner := scanner.NewGoScanner()
 				findings, err := goScanner.Scan(target)
 				if err == nil && len(findings) > 0 {
-					findingsJson, _ = json.Marshal(findings)
+					fj, merr := json.Marshal(findings)
+					if merr != nil {
+						return nil, nil, fmt.Errorf("failed to marshal findings for %s: %w", relPath, merr)
+					}
+					findingsJson = fj
 				}
 			}
 
-			fileAsset.Metadata, _ = json.Marshal(map[string]interface{}{
+			fileMeta, err := json.Marshal(map[string]interface{}{
 				"path":     relPath,
 				"findings": json.RawMessage(findingsJson),
 			})
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to marshal file metadata: %w", err)
+			}
+			fileAsset.Metadata = fileMeta
+
 			assets = append(assets, fileAsset)
 		}
 	}
 
 	return assets, edges, nil
-}
-
-func generateID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }
