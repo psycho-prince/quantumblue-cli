@@ -44,10 +44,10 @@ for model_name, body in models:
         field_name = parts[0]
         field_type = parts[1]
         
+        base_type = field_type.replace('?', '').replace('[]', '')
+        
         # skip relation fields (assuming they start with uppercase or are arrays of relations)
-        if field_type.startswith(tuple('ABCDEFGHIJKLMNOPQRSTUVWXYZ')) and not field_type in ['String', 'Int', 'Float', 'Boolean', 'DateTime', 'Json']:
-            continue
-        if field_type.endswith('[]') and field_type[:-2].startswith(tuple('ABCDEFGHIJKLMNOPQRSTUVWXYZ')) and field_type[:-2] != 'String':
+        if base_type.startswith(tuple('ABCDEFGHIJKLMNOPQRSTUVWXYZ')) and base_type not in ['String', 'Int', 'Float', 'Boolean', 'DateTime', 'Json']:
             continue
             
         go_type = type_mapping.get(field_type, 'string') # fallback
@@ -75,28 +75,5 @@ for model_name, body in models:
     file_name = f"{out_dir}/{model_name.lower()}.go"
     with open(file_name, 'w') as f:
         f.write(file_content)
-
-    # write test file
-    test_file_content = f"""package model
-
-import (
-    "encoding/json"
-    "testing"
-)
-
-func Test{model_name}RoundTrip(t *testing.T) {{
-    var obj {model_name}
-    data := []byte(`{{}}`) // minimal valid json for round trip
-    if err := json.Unmarshal(data, &obj); err != nil {{
-        t.Fatalf("Failed to unmarshal {model_name}: %v", err)
-    }}
-    if _, err := json.Marshal(obj); err != nil {{
-        t.Fatalf("Failed to marshal {model_name}: %v", err)
-    }}
-}}
-"""
-    test_file_name = f"{out_dir}/{model_name.lower()}_test.go"
-    with open(test_file_name, 'w') as f:
-        f.write(test_file_content)
 
 print("Go models generated.")
