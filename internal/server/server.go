@@ -10,6 +10,7 @@ import (
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 	"github.com/psycho-prince/pqc-sdk/internal/entitlement"
 	"github.com/psycho-prince/pqc-sdk/internal/connector/github"
+	"github.com/psycho-prince/pqc-sdk/internal/connector/aws"
 )
 
 // StartServer initializes the HTTP daemon exposing PQC operations
@@ -268,6 +269,79 @@ func StartServer(port, dsn string) error {
 			"connector": "github",
 			"owner":     req.Owner,
 			"repo":      req.Repo,
+			"assets":    len(assets),
+			"edges":     len(edges),
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"organization": orgID,
+			"assets":       assets,
+			"edges":        edges,
+		})
+	})
+
+
+	// /v1/connectors/aws/scan
+	http.HandleFunc("/v1/connectors/aws/scan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		if featureChecker != nil {
+			enabled, err := featureChecker.IsEnabled(r.Context(), orgID, "aws_connector")
+			if err != nil {
+				http.Error(w, "Internal server error during entitlement check", http.StatusInternalServerError)
+				return
+			}
+			if !enabled {
+				http.Error(w, `{"error": "Forbidden: Organization is not entitled to aws_connector"}`, http.StatusForbidden)
+				return
+			}
+		} else {
+			http.Error(w, `{"error": "Forbidden: Entitlement checks unavailable"}`, http.StatusForbidden)
+			return
+		}
+
+		var req struct {
+			RoleARN    string   `json:"roleArn"`
+			ExternalID string   `json:"externalId"`
+			Regions    []string `json:"regions"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if req.RoleARN == "" {
+			http.Error(w, "roleArn is required", http.StatusBadRequest)
+			return
+		}
+
+		cfg := aws.Config{
+			Organization: orgID,
+			RoleARN:      req.RoleARN,
+			ExternalID:   req.ExternalID,
+			Regions:      req.Regions,
+		}
+
+		conn := aws.NewAWSConnector(cfg, featureChecker)
+		assets, edges, err := conn.Discover(r.Context())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connector discovery failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		LogAuditEvent(orgID, "CONNECTOR_SCAN", map[string]interface{}{
+			"connector": "aws",
+			"role_arn":  req.RoleARN,
 			"assets":    len(assets),
 			"edges":     len(edges),
 		})
