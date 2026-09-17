@@ -26,3 +26,8 @@ func (e *Entitlement) HasFeature(name string) bool {
 	v, ok := feats[name]
 	return ok && v
 }
+
+// FeaturesFromString converts a JSON string to json.RawMessage for Entitlement.Features.
+func FeaturesFromString(s string) json.RawMessage {
+	return json.RawMessage(s)
+}
