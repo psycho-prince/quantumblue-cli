@@ -40,7 +40,7 @@ func NewGithubConnector(config Config, checker entitlement.FeatureChecker) *Gith
 	if config.BaseURL == "" {
 		config.BaseURL = "https://api.github.com"
 	}
-	return &GithubConnector{config: config, client: &http.Client{}, checker: checker}
+	return &GithubConnector{config: config, client: &http.Client{Timeout: 30 * time.Second}, checker: checker}
 }
 
 func (c *GithubConnector) Name() string {
@@ -97,7 +97,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid base URL: %w", err)
 	}
-	u.Path = filepath.Join(u.Path, "repos", url.PathEscape(c.config.Owner), url.PathEscape(c.config.Repo), "tarball")
+	u = u.JoinPath("repos", c.config.Owner, c.config.Repo, "tarball")
 
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
