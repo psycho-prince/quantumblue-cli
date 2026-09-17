@@ -9,8 +9,40 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"fmt"
+
 	"github.com/psycho-prince/pqc-sdk/internal/model"
 )
+
+type FakeFeatureChecker struct {
+	Enabled map[string]bool
+	Err     error
+}
+
+func (f *FakeFeatureChecker) IsEnabled(ctx context.Context, orgID, feature string) (bool, error) {
+	if f.Err != nil {
+		return false, f.Err
+	}
+	return f.Enabled[orgID+":"+feature], nil
+}
+
+func TestGithubConnector_Discover_Gated(t *testing.T) {
+	// Not entitled
+	cfg := Config{Organization: "org-1", Owner: "o", Repo: "r"}
+	checker := &FakeFeatureChecker{Enabled: map[string]bool{"org-1:github_connector": false}}
+	c := NewGithubConnector(cfg, checker)
+	_, _, err := c.Discover(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "not entitled") {
+		t.Fatalf("Expected not entitled error, got %v", err)
+	}
+
+	// Checker error
+	checker.Err = fmt.Errorf("db error")
+	_, _, err = c.Discover(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "entitlement check failed: db error") {
+		t.Fatalf("Expected db error, got %v", err)
+	}
+}
 
 func TestGithubConnector_Discover(t *testing.T) {
 	var buf bytes.Buffer
@@ -63,13 +95,15 @@ func main() {
 		BaseURL:      ts.URL,
 	}
 
-	connector := NewGithubConnector(cfg)
+	// Entitled!
+	checker := &FakeFeatureChecker{Enabled: map[string]bool{"org-123:github_connector": true}}
+	connector := NewGithubConnector(cfg, checker)
+	
 	assets, edges, err := connector.Discover(context.Background())
 	if err != nil {
 		t.Fatalf("Discover failed: %v", err)
 	}
 
-	// Structural assertions instead of raw counts
 	var repoAsset *model.Asset
 	filesFound := make(map[string]*model.Asset)
 
@@ -97,7 +131,6 @@ func main() {
 		t.Errorf("Expected to find crypto/rsa finding in main.go metadata, got %s", mainGoAsset.Metadata)
 	}
 
-	// Ensure edges exist from repo to main.go
 	foundEdge := false
 	for _, e := range edges {
 		if e.FromAssetId == repoAsset.Id && e.ToAssetId == mainGoAsset.Id && e.Relation == "contains" {

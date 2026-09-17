@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,31 +15,32 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"crypto/rand"
-	"encoding/hex"
 
+	"github.com/psycho-prince/pqc-sdk/internal/entitlement"
 	"github.com/psycho-prince/pqc-sdk/internal/model"
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 )
 
 type Config struct {
-	Token        string
-	Organization string
-	Owner        string
-	Repo         string
-	BaseURL      string // For testing
+	Token             string
+	Organization      string
+	Owner             string
+	Repo              string
+	BaseURL           string // For testing
+	EntitlementBypass bool   // test hook
 }
 
 type GithubConnector struct {
 	config Config
 	client *http.Client
+	checker entitlement.FeatureChecker
 }
 
-func NewGithubConnector(config Config) *GithubConnector {
+func NewGithubConnector(config Config, checker entitlement.FeatureChecker) *GithubConnector {
 	if config.BaseURL == "" {
 		config.BaseURL = "https://api.github.com"
 	}
-	return &GithubConnector{config: config, client: &http.Client{}}
+	return &GithubConnector{config: config, client: &http.Client{}, checker: checker}
 }
 
 func (c *GithubConnector) Name() string {
@@ -51,9 +54,15 @@ func generateID() string {
 }
 
 func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.AssetEdge, error) {
-	// 1. Connector-level Entitlement Check
-	// The entitlement check is done by the caller (API layer) or via an injected policy.
-	// For now, we assume the caller has authorized it. 
+	if !c.config.EntitlementBypass && c.checker != nil {
+		enabled, err := c.checker.IsEnabled(ctx, c.config.Organization, "github_connector")
+		if err != nil {
+			return nil, nil, fmt.Errorf("entitlement check failed: %w", err)
+		}
+		if !enabled {
+			return nil, nil, fmt.Errorf("organization %s is not entitled to feature github_connector", c.config.Organization)
+		}
+	}
 
 	var assets []model.Asset
 	var edges []model.AssetEdge
@@ -70,7 +79,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 		LastSeenAt:     time.Now(),
 		Active:         true,
 	}
-	
+
 	meta, err := json.Marshal(map[string]string{"name": repoFullName})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal repo metadata: %w", err)
@@ -157,7 +166,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 				LastSeenAt:     time.Now(),
 				Active:         true,
 			}
-			
+
 			edges = append(edges, model.AssetEdge{
 				Id:          generateID(),
 				FromAssetId: repoAsset.Id,
