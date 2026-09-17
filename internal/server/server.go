@@ -8,6 +8,8 @@ import (
 
 	"github.com/psycho-prince/pqc-sdk/internal/crypto"
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
+	"github.com/psycho-prince/pqc-sdk/internal/entitlement"
+	"github.com/psycho-prince/pqc-sdk/internal/connector/github"
 )
 
 // StartServer initializes the HTTP daemon exposing PQC operations
@@ -19,6 +21,11 @@ func StartServer(port, dsn string) error {
 		fmt.Println("Connected to unified PostgreSQL database")
 	}
 
+	var featureChecker entitlement.FeatureChecker
+	if db != nil {
+		store := entitlement.NewDBEntitlementStore(db)
+		featureChecker = entitlement.NewDBFeatureChecker(store)
+	}
 
 	// /health
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +55,6 @@ func StartServer(port, dsn string) error {
 			return
 		}
 		
-		// We can read public key to return it
 		pkBytes, _ := os.ReadFile(orgID + ".pub")
 
 		LogAuditEvent(orgID, "GENERATE_KEYPAIR", map[string]interface{}{
@@ -165,7 +171,6 @@ func StartServer(port, dsn string) error {
 		var scanErr error
 
 		if req.SourceCode != "" {
-			// Write to temp file
 			tmpfile, err := os.CreateTemp("", "scan-*.go")
 			if err != nil {
 				http.Error(w, "Failed to create temp file", http.StatusInternalServerError)
@@ -198,6 +203,80 @@ func StartServer(port, dsn string) error {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"organization": orgID,
 			"cbom":         findings,
+		})
+	})
+
+	// /v1/connectors/github/scan
+	http.HandleFunc("/v1/connectors/github/scan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+		orgID, err := authenticate(r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		if featureChecker != nil {
+			enabled, err := featureChecker.IsEnabled(r.Context(), orgID, "github_connector")
+			if err != nil {
+				http.Error(w, "Internal server error during entitlement check", http.StatusInternalServerError)
+				return
+			}
+			if !enabled {
+				http.Error(w, `{"error": "Forbidden: Organization is not entitled to github_connector"}`, http.StatusForbidden)
+				return
+			}
+		} else {
+			// If no DB / feature checker is configured, we must fail closed to prevent unpaid scans in prod.
+			http.Error(w, `{"error": "Forbidden: Entitlement checks unavailable"}`, http.StatusForbidden)
+			return
+		}
+
+		var req struct {
+			Owner string `json:"owner"`
+			Repo  string `json:"repo"`
+			Token string `json:"token"` // Optional user-provided token
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if req.Owner == "" || req.Repo == "" {
+			http.Error(w, "owner and repo are required", http.StatusBadRequest)
+			return
+		}
+
+		cfg := github.Config{
+			Organization: orgID,
+			Owner:        req.Owner,
+			Repo:         req.Repo,
+			Token:        req.Token,
+		}
+
+		conn := github.NewGithubConnector(cfg, featureChecker)
+		assets, edges, err := conn.Discover(r.Context())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connector discovery failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		LogAuditEvent(orgID, "CONNECTOR_SCAN", map[string]interface{}{
+			"connector": "github",
+			"owner":     req.Owner,
+			"repo":      req.Repo,
+			"assets":    len(assets),
+			"edges":     len(edges),
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"organization": orgID,
+			"assets":       assets,
+			"edges":        edges,
 		})
 	})
 
