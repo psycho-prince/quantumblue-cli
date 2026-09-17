@@ -13,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"crypto/rand"
+	"encoding/hex"
 	"github.com/psycho-prince/pqc-sdk/internal/model"
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 )
@@ -46,7 +47,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 	var edges []model.AssetEdge
 
 	repoAsset := model.Asset{
-		Id:             uuid.New().String(),
+		Id:             generateID(),
 		OrganizationId: c.config.Organization,
 		Kind:           "repository",
 		Identifier:     fmt.Sprintf("github.com/%s", c.config.RepoName),
@@ -127,7 +128,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 			f.Close()
 
 			fileAsset := model.Asset{
-				Id:             uuid.New().String(),
+				Id:             generateID(),
 				OrganizationId: c.config.Organization,
 				Kind:           "file",
 				Identifier:     fmt.Sprintf("github.com/%s/%s", c.config.RepoName, relPath),
@@ -139,7 +140,7 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 			}
 			
 			edges = append(edges, model.AssetEdge{
-				Id:          uuid.New().String(),
+				Id:          generateID(),
 				FromAssetId: repoAsset.Id,
 				ToAssetId:   fileAsset.Id,
 				Relation:    "contains",
@@ -165,4 +166,10 @@ func (c *GithubConnector) Discover(ctx context.Context) ([]model.Asset, []model.
 	}
 
 	return assets, edges, nil
+}
+
+func generateID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
