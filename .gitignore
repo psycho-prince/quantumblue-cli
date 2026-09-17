@@ -40,3 +40,4 @@ pub.key
 signature.sig
 transaction.json
 pqc.db
+dashboard/db/quantumblue.db
