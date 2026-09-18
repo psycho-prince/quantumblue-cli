@@ -1,0 +1,31 @@
+run:
+  modules-download-mode: mod
+
+linters:
+  enable:
+    - revive
+    - govet
+    - staticcheck
+    - ineffassign
+    - errcheck
+    - gosimple
+    - unused
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+
+issues:
+  exclude-use-default: false
+  exclude-dirs:
+    - tests
+  max-issues-per-linter: 0
+  max-same-issues: 0
