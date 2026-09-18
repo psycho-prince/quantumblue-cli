@@ -3,6 +3,14 @@ module github.com/psycho-prince/pqc-sdk
 go 1.26.5
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.47.0
+	github.com/aws/aws-sdk-go-v2/config v1.27.6
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.6
+	github.com/aws/aws-sdk-go-v2/service/acm v1.30.6
+	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.0
+	github.com/aws/aws-sdk-go-v2/service/kms v1.61.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.3
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.21
 	github.com/cloudflare/circl v1.6.4
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/jung-kurt/gofpdf v1.16.2
@@ -16,6 +24,20 @@ require (
 )
 
 require (
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.18 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.15.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.39 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.31 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.38 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.39 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.20.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.1 // indirect
+	github.com/aws/smithy-go v1.28.1 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

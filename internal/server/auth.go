@@ -54,7 +54,7 @@ func authenticate(r *http.Request) (string, error) {
 	hashedKey := hex.EncodeToString(hash.Sum(nil))
 
 	var orgID string
-	query := `SELECT organizationId FROM ApiKey WHERE keyHash = ? AND revokedAt IS NULL`
+	query := `SELECT "organizationId" FROM "ApiKey" WHERE "keyHash" = $1 AND "revokedAt" IS NULL`
 	err := db.QueryRow(query, hashedKey).Scan(&orgID)
 	if err != nil {
 		return "", fmt.Errorf("invalid or revoked API key")
@@ -75,7 +75,7 @@ func LogAuditEvent(orgID, action string, details map[string]interface{}) {
 		return
 	}
 
-	query := `INSERT INTO AuditEvent (id, organizationId, action, details, createdAt) VALUES (?, ?, ?, ?, datetime('now'))`
+	query := `INSERT INTO "AuditEvent" ("id", "organizationId", "action", "details", "createdAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
 	_, err = db.Exec(query, generateUUID(), orgID, action, string(detailsBytes))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to log audit event: %v\n", err)

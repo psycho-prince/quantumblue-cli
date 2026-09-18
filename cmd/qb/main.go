@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
@@ -15,15 +16,16 @@ import (
 	"github.com/psycho-prince/pqc-sdk/internal/cbom"
 	"github.com/psycho-prince/pqc-sdk/internal/certificate"
 	"github.com/psycho-prince/pqc-sdk/internal/crypto"
+	"github.com/psycho-prince/pqc-sdk/internal/discovery"
 	"github.com/psycho-prince/pqc-sdk/internal/scanner"
 	"github.com/psycho-prince/pqc-sdk/internal/server"
 )
 
 func main() {
 	fmt.Println("QuantumBlue CLI v2.0.0-alpha")
-	
+
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: qb [scan | daemon | cbom | bundle | certificate | crypto-shred | key]")
+		fmt.Println("Usage: qb [scan | discover | daemon | cbom | bundle | certificate | crypto-shred | key]")
 		return
 	}
 
@@ -42,6 +44,40 @@ func main() {
 		for _, f := range findings {
 			fmt.Printf("Found: %s at %s\n", f.Primitive, f.Location)
 		}
+	case "discover":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: qb discover <domain> [--org-id <id>]")
+			return
+		}
+		domain := os.Args[2]
+		orgID := "default-org"
+		// Parse optional --org-id flag
+		for i := 3; i < len(os.Args); i++ {
+			if os.Args[i] == "--org-id" && i+1 < len(os.Args) {
+				orgID = os.Args[i+1]
+				break
+			}
+		}
+		svc, err := discovery.NewService()
+		if err != nil {
+			fmt.Printf("Error initializing discovery: %v\n", err)
+			return
+		}
+		result, err := svc.Discover(context.Background(), orgID, domain)
+		if err != nil {
+			fmt.Printf("Discovery failed: %v\n", err)
+			return
+		}
+		fmt.Printf("Discovery complete for %s\n", domain)
+		fmt.Printf("  Assets: %d\n", len(result.CryptoUses)+len(result.Edges))
+		fmt.Printf("  Crypto uses: %d\n", len(result.CryptoUses))
+		fmt.Printf("  Findings: %d\n", len(result.Findings))
+		fmt.Printf("  Edges: %d\n", len(result.Edges))
+		for _, f := range result.Findings {
+			fmt.Printf("  ⚠ %s (%s) — %s [role: %s]\n", f.Primitive, f.QuantumStatus, f.Location, f.Role)
+		}
+		summary := svc.RiskSummary(result)
+		fmt.Printf("  Summary: %+v\n", summary)
 	case "daemon":
 		if len(os.Args) < 3 {
 			fmt.Println("Usage: qb daemon <port>")
