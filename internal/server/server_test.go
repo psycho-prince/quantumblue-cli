@@ -76,8 +76,8 @@ func (td *testDB) setDB() {
 
 // close closes the test database and resets the package-level db to nil.
 func (td *testDB) close() {
-	td.setDB()
 	td.db.Close()
+	db = nil
 }
 
 func (td *testDB) insertApiKey(t *testing.T, rawKey, orgID string, revoked bool) {
@@ -191,82 +191,57 @@ func registerAllHandlers(mux *http.ServeMux, featureChecker entitlement.FeatureC
 
 	// /v1/keys
 	mux.HandleFunc("/v1/keys", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			fmt.Fprint(w, `{"error": "Method Not Allowed"}`)
+		if !ValidateOnlyPOST(w, r) {
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-		orgID, err := authenticate(r)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, `{"error": "Unauthorized"}`)
+		ValidateBodySize(w, r, 10<<20)
+		ar := AuthenticateRequest(r)
+		if ar.Err != nil {
+			Unauthorized(w)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"organization": orgID,
+		JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"organization": ar.OrgID,
 		})
 	})
 
 	// /v1/connectors/github/scan
 	mux.HandleFunc("/v1/connectors/github/scan", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			fmt.Fprint(w, `{"error": "Method Not Allowed"}`)
+		if !ValidateOnlyPOST(w, r) {
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-		orgID, err := authenticate(r)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, `{"error": "Unauthorized"}`)
+		ValidateBodySize(w, r, 10<<20)
+		ar := AuthenticateRequest(r)
+		if ar.Err != nil {
+			Unauthorized(w)
 			return
 		}
 
-		if featureChecker != nil {
-			enabled, err := featureChecker.IsEnabled(r.Context(), orgID, "github_connector")
-			if err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, `{"error": "Internal server error during entitlement check"}`)
-				return
+		er := CheckEntitlement(r.Context(), ar.OrgID, "github_connector", featureChecker)
+		if er.Err != nil {
+			if er.Err.Error() == "entitlement checks unavailable" {
+				Forbidden(w, "Forbidden: Entitlement checks unavailable")
+			} else {
+				InternalError(w, "Internal server error during entitlement check")
 			}
-			if !enabled {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				fmt.Fprint(w, `{"error": "Forbidden: Organization is not entitled to github_connector"}`)
-				return
-			}
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, `{"error": "Forbidden: Entitlement checks unavailable"}`)
+			return
+		}
+		if !er.Enabled {
+			Forbidden(w, "Forbidden: Organization is not entitled to github_connector")
 			return
 		}
 
-		var req struct {
-			Owner string `json:"owner"`
-			Repo  string `json:"repo"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"error": "Invalid request"}`)
+		var req GitHubScanRequest
+		if err := ParseJSONBody(r, &req); err != nil {
+			BadRequest(w, "Invalid request")
 			return
 		}
-		if req.Owner == "" || req.Repo == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"error": "owner and repo are required"}`)
+		if err := ValidateGitHubScanRequest(req); err != nil {
+			BadRequest(w, err.Error())
 			return
 		}
 
-		LogAuditEvent(orgID, "CONNECTOR_SCAN", map[string]interface{}{
+		LogAuditEvent(ar.OrgID, "CONNECTOR_SCAN", map[string]interface{}{
 			"connector": "github",
 			"owner":     req.Owner,
 			"repo":      req.Repo,
@@ -274,9 +249,8 @@ func registerAllHandlers(mux *http.ServeMux, featureChecker entitlement.FeatureC
 			"edges":     0,
 		})
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"organization": orgID,
+		JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"organization": ar.OrgID,
 			"assets":       []interface{}{},
 			"edges":        []interface{}{},
 		})
@@ -284,86 +258,60 @@ func registerAllHandlers(mux *http.ServeMux, featureChecker entitlement.FeatureC
 
 	// /v1/connectors/aws/scan
 	mux.HandleFunc("/v1/connectors/aws/scan", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			fmt.Fprint(w, `{"error": "Method Not Allowed"}`)
+		if !ValidateOnlyPOST(w, r) {
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-		orgID, err := authenticate(r)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, `{"error": "Unauthorized"}`)
+		ValidateBodySize(w, r, 10<<20)
+		ar := AuthenticateRequest(r)
+		if ar.Err != nil {
+			Unauthorized(w)
 			return
 		}
 
-		if featureChecker != nil {
-			enabled, err := featureChecker.IsEnabled(r.Context(), orgID, "aws_connector")
-			if err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, `{"error": "Internal server error during entitlement check"}`)
-				return
+		er := CheckEntitlement(r.Context(), ar.OrgID, "aws_connector", featureChecker)
+		if er.Err != nil {
+			if er.Err.Error() == "entitlement checks unavailable" {
+				Forbidden(w, "Forbidden: Entitlement checks unavailable")
+			} else {
+				InternalError(w, "Internal server error during entitlement check")
 			}
-			if !enabled {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				fmt.Fprint(w, `{"error": "Forbidden: Organization is not entitled to aws_connector"}`)
-				return
-			}
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, `{"error": "Forbidden: Entitlement checks unavailable"}`)
+			return
+		}
+		if !er.Enabled {
+			Forbidden(w, "Forbidden: Organization is not entitled to aws_connector")
 			return
 		}
 
-		var req struct {
-			RoleARN    string   `json:"roleArn"`
-			ExternalID string   `json:"externalId"`
-			Regions    []string `json:"regions"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"error": "Invalid request"}`)
+		var req AWSScanRequest
+		if err := ParseJSONBody(r, &req); err != nil {
+			BadRequest(w, "Invalid request")
 			return
 		}
-		if req.RoleARN == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, `{"error": "roleArn is required"}`)
+		if err := ValidateAWSScanRequest(req); err != nil {
+			BadRequest(w, err.Error())
 			return
 		}
 
-		LogAuditEvent(orgID, "CONNECTOR_SCAN", map[string]interface{}{
+		LogAuditEvent(ar.OrgID, "CONNECTOR_SCAN", map[string]interface{}{
 			"connector": "aws",
-			"role_arn":  req.RoleARN,
+			"accountId": req.AccountID,
+			"regions":   req.Regions,
 			"assets":    0,
 			"edges":     0,
 		})
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"organization": orgID,
+		JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"organization": ar.OrgID,
 			"assets":       []interface{}{},
 			"edges":        []interface{}{},
 		})
 	})
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
-func setupTest(t *testing.T) *testDB {
-	td := newTestDB(t)
-	td.setDB()
-	return td
-}
+// ─── Auth perimeter tests ────────────────────────────────────────────────────
 
 func TestAuthenticate_MissingHeader(t *testing.T) {
-	td := setupTest(t)
+	td := newTestDB(t)
 	defer td.db.Close()
 
 	// Insert test data
@@ -393,7 +341,7 @@ func TestAuthenticate_MissingHeader(t *testing.T) {
 }
 
 func TestAuthenticate_MalformedHeader(t *testing.T) {
-	td := setupTest(t)
+	td := newTestDB(t)
 	defer td.db.Close()
 
 	td.insertApiKey(t, "test-key", "org-123", false)
@@ -424,7 +372,7 @@ func TestAuthenticate_MalformedHeader(t *testing.T) {
 }
 
 func TestAuthenticate_EmptyBearer(t *testing.T) {
-	td := setupTest(t)
+	td := newTestDB(t)
 	defer td.db.Close()
 
 	td.insertApiKey(t, "test-key", "org-123", false)
@@ -455,7 +403,7 @@ func TestAuthenticate_EmptyBearer(t *testing.T) {
 }
 
 func TestAuthenticate_InvalidKey(t *testing.T) {
-	td := setupTest(t)
+	td := newTestDB(t)
 	defer td.db.Close()
 
 	td.insertApiKey(t, "test-key", "org-123", false)
@@ -486,7 +434,7 @@ func TestAuthenticate_InvalidKey(t *testing.T) {
 }
 
 func TestAuthenticate_RevokedKey(t *testing.T) {
-	td := setupTest(t)
+	td := newTestDB(t)
 	defer td.db.Close()
 
 	// Insert a revoked key
@@ -549,6 +497,8 @@ func TestAuthenticate_ValidKey_Succeeds(t *testing.T) {
 		t.Errorf("expected 200 for valid key, got %d: %s", resp.StatusCode, string(body))
 	}
 }
+
+// ─── Entitlement gate tests ──────────────────────────────────────────────────
 
 func TestEntitlement_GitHubDisabled_Returns403(t *testing.T) {
 	td := newTestDB(t)
@@ -635,7 +585,7 @@ func TestEntitlement_AWSDisabled_Returns403(t *testing.T) {
 
 	req, _ := http.NewRequest("POST",
 		server.URL+"/v1/connectors/aws/scan",
-		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test"}`))
+		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test","accountId":"123456789012","regions":["us-east-1"]}`))
 	req.Header.Set("Authorization", "Bearer test-key")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -682,7 +632,7 @@ func TestEntitlement_CheckerError_Returns500(t *testing.T) {
 	}
 }
 
-func TestEntitlement_FailClosed_WhenNilChecker(t *testing.T) {
+func TestEntitlement_GitHub_FailClosed_WhenNilChecker(t *testing.T) {
 	td := newTestDB(t)
 	defer td.db.Close()
 	td.setDB()
@@ -714,7 +664,7 @@ func TestEntitlement_FailClosed_WhenNilChecker(t *testing.T) {
 	}
 }
 
-func TestEntitlement_FailClosed_AWS_WhenNilChecker(t *testing.T) {
+func TestEntitlement_AWS_FailClosed_WhenNilChecker(t *testing.T) {
 	td := newTestDB(t)
 	defer td.db.Close()
 	td.setDB()
@@ -733,7 +683,7 @@ func TestEntitlement_FailClosed_AWS_WhenNilChecker(t *testing.T) {
 
 	req, _ := http.NewRequest("POST",
 		server.URL+"/v1/connectors/aws/scan",
-		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test"}`))
+		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test","accountId":"123456789012","regions":["us-east-1"]}`))
 	req.Header.Set("Authorization", "Bearer test-key")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -745,6 +695,8 @@ func TestEntitlement_FailClosed_AWS_WhenNilChecker(t *testing.T) {
 		t.Errorf("expected 403 for AWS when featureChecker is nil, got %d", resp.StatusCode)
 	}
 }
+
+// ─── Audit log tests ─────────────────────────────────────────────────────────
 
 func TestAuditLog_GitHubScan_LogsCorrectly(t *testing.T) {
 	td := newTestDB(t)
@@ -823,7 +775,7 @@ func TestAuditLog_AWSScan_LogsCorrectly(t *testing.T) {
 
 	req, _ := http.NewRequest("POST",
 		server.URL+"/v1/connectors/aws/scan",
-		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test"}`))
+		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test","accountId":"123456789012","regions":["us-east-1"]}`))
 	req.Header.Set("Authorization", "Bearer test-key")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -849,10 +801,12 @@ func TestAuditLog_AWSScan_LogsCorrectly(t *testing.T) {
 	if details["connector"] != "aws" {
 		t.Errorf("expected connector=aws, got %v", details["connector"])
 	}
-	if details["role_arn"] != "arn:aws:iam::123456789012:role/Test" {
-		t.Errorf("expected role_arn in audit, got %v", details["role_arn"])
+	if details["accountId"] != "123456789012" {
+		t.Errorf("expected accountId=123456789012 in audit, got %v", details["accountId"])
 	}
 }
+
+// ─── AWS input validation tests ──────────────────────────────────────────────
 
 func TestAWSInput_Validation_RoleARNRequired(t *testing.T) {
 	td := newTestDB(t)
@@ -919,6 +873,8 @@ func TestAWSInput_Validation_BadJSON(t *testing.T) {
 	}
 }
 
+// ─── AWS method enforcement ──────────────────────────────────────────────────
+
 func TestAWSInput_Validation_MethodNotAllowed(t *testing.T) {
 	td := newTestDB(t)
 	defer td.db.Close()
@@ -948,6 +904,8 @@ func TestAWSInput_Validation_MethodNotAllowed(t *testing.T) {
 		t.Errorf("expected 405 for GET, got %d", resp.StatusCode)
 	}
 }
+
+// ─── GitHub input validation tests ───────────────────────────────────────────
 
 func TestGitHubInput_Validation_BadJSON(t *testing.T) {
 	td := newTestDB(t)
@@ -1015,6 +973,8 @@ func TestGitHubInput_Validation_MissingFields(t *testing.T) {
 	}
 }
 
+// ─── Health endpoint ─────────────────────────────────────────────────────────
+
 func TestHealthEndpoint(t *testing.T) {
 	td := newTestDB(t)
 	defer td.db.Close()
@@ -1045,6 +1005,8 @@ func TestHealthEndpoint(t *testing.T) {
 		t.Errorf("expected status=ok, got %v", body["status"])
 	}
 }
+
+// ─── Org isolation tests ─────────────────────────────────────────────────────
 
 func TestMultipleOrgs_Isolated(t *testing.T) {
 	td := newTestDB(t)
@@ -1116,7 +1078,7 @@ func TestMultipleOrgs_Isolated(t *testing.T) {
 	// org-2 → AWS (should succeed)
 	req, _ = http.NewRequest("POST",
 		server.URL+"/v1/connectors/aws/scan",
-		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test"}`))
+		strings.NewReader(`{"roleArn":"arn:aws:iam::123456789012:role/Test","accountId":"123456789012","regions":["us-east-1"]}`))
 	req.Header.Set("Authorization", "Bearer org2-key")
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
