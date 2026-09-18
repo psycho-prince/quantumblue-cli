@@ -282,73 +282,176 @@ func StartServer(port, dsn string) error {
 	})
 
 
-	// /v1/connectors/aws/scan
-	http.HandleFunc("/v1/connectors/aws/scan", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	// /v1/connectors/aws/accounts — register an AWS account for scanning
+	http.HandleFunc("/v1/connectors/aws/accounts", func(w http.ResponseWriter, r *http.Request) {
+		if !ValidateOnlyPOST(w, r) {
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-		orgID, err := authenticate(r)
-		if err != nil {
-			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+		ValidateBodySize(w, r, 10<<20)
+		ar := AuthenticateRequest(r)
+		if ar.Err != nil {
+			Unauthorized(w)
 			return
 		}
 
 		if featureChecker != nil {
-			enabled, err := featureChecker.IsEnabled(r.Context(), orgID, "aws_connector")
+			enabled, err := featureChecker.IsEnabled(r.Context(), ar.OrgID, "aws_connector")
 			if err != nil {
-				http.Error(w, "Internal server error during entitlement check", http.StatusInternalServerError)
+				InternalError(w, "Internal server error during entitlement check")
 				return
 			}
 			if !enabled {
-				http.Error(w, `{"error": "Forbidden: Organization is not entitled to aws_connector"}`, http.StatusForbidden)
+				Forbidden(w, "Forbidden: Organization is not entitled to aws_connector")
 				return
 			}
 		} else {
-			http.Error(w, `{"error": "Forbidden: Entitlement checks unavailable"}`, http.StatusForbidden)
+			// Fail closed: no entitlement infrastructure → no account registration.
+			Forbidden(w, "Forbidden: Entitlement checks unavailable")
 			return
 		}
 
 		var req struct {
-			RoleARN    string   `json:"roleArn"`
-			ExternalID string   `json:"externalId"`
-			Regions    []string `json:"regions"`
+			AccountID string `json:"accountId"`
+			RoleARN   string `json:"roleArn"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+		if err := ParseJSONBody(r, &req); err != nil {
+			BadRequest(w, "Invalid request")
 			return
 		}
 
-		if req.RoleARN == "" {
-			http.Error(w, "roleArn is required", http.StatusBadRequest)
+		if req.AccountID == "" || req.RoleARN == "" {
+			BadRequest(w, "accountId and roleArn are required")
+			return
+		}
+
+		// Validate the role ARN and extract the account ID.
+		extractedAcct, err := aws.ValidateRoleARN(req.RoleARN)
+		if err != nil {
+			BadRequest(w, "roleArn format not allowed")
+			return
+		}
+		if err := aws.ValidateAccountID(extractedAcct); err != nil {
+			BadRequest(w, "roleArn format not allowed")
+			return
+		}
+
+		// The account ID in the ARN must match the supplied accountId.
+		if extractedAcct != req.AccountID {
+			BadRequest(w, "accountId does not match roleArn")
+			return
+		}
+
+		// Generate a server-side ExternalID so the caller never supplies it.
+		externalID := "qb-" + generateUUID()
+
+		store := entitlement.NewDBAWSAccountStore(db)
+		account, err := store.Insert(r.Context(), ar.OrgID, req.AccountID, req.RoleARN, externalID)
+		if err != nil {
+			InternalError(w, "Failed to register AWS account")
+			return
+		}
+
+		LogAuditEvent(ar.OrgID, "AWS_ACCOUNT_REGISTERED", map[string]interface{}{
+			"accountId": account.AccountId,
+			"roleArn":   account.RoleArn,
+		})
+
+		JSONResponse(w, http.StatusCreated, map[string]interface{}{
+			"id":         account.Id,
+			"accountId":  account.AccountId,
+			"roleArn":    account.RoleArn,
+			"externalId": account.ExternalId,
+			"enabled":    account.Enabled,
+		})
+	})
+
+	// /v1/connectors/aws/scan — account-scoped scan
+	http.HandleFunc("/v1/connectors/aws/scan", func(w http.ResponseWriter, r *http.Request) {
+		if !ValidateOnlyPOST(w, r) {
+			return
+		}
+		ValidateBodySize(w, r, 10<<20)
+		ar := AuthenticateRequest(r)
+		if ar.Err != nil {
+			Unauthorized(w)
+			return
+		}
+
+		if featureChecker != nil {
+			enabled, err := featureChecker.IsEnabled(r.Context(), ar.OrgID, "aws_connector")
+			if err != nil {
+				InternalError(w, "Internal server error during entitlement check")
+				return
+			}
+			if !enabled {
+				Forbidden(w, "Forbidden: Organization is not entitled to aws_connector")
+				return
+			}
+		} else {
+			Forbidden(w, "Forbidden: Entitlement checks unavailable")
+			return
+		}
+
+		var req AWSScanRequest
+		if err := ParseJSONBody(r, &req); err != nil {
+			BadRequest(w, "Invalid request")
+			return
+		}
+
+		if err := ValidateAWSScanRequest(req); err != nil {
+			BadRequest(w, err.Error())
+			return
+		}
+
+		// Validate the account ID format.
+		if err := aws.ValidateAccountID(req.AccountID); err != nil {
+			BadRequest(w, "accountId format not allowed")
+			return
+		}
+
+		// Look up the registered account from the DB — never trust caller-supplied roleArn/externalId.
+		store := entitlement.NewDBAWSAccountStore(db)
+		account, err := store.GetForOrgAndAccount(r.Context(), ar.OrgID, req.AccountID)
+		if err != nil {
+			InternalError(w, "Failed to look up AWS account")
+			return
+		}
+		if account == nil {
+			Forbidden(w, "Forbidden: account not registered for this organization")
+			return
+		}
+
+		// Validate requested regions.
+		if err := aws.ValidateRegions(req.Regions, 5); err != nil {
+			BadRequest(w, err.Error())
 			return
 		}
 
 		cfg := aws.Config{
-			Organization: orgID,
-			RoleARN:      req.RoleARN,
-			ExternalID:   req.ExternalID,
+			Organization: ar.OrgID,
+			RoleARN:      account.RoleArn,  // from DB, not caller
+			ExternalID:   account.ExternalId, // from DB, not caller
 			Regions:      req.Regions,
 		}
 
 		conn := aws.NewAWSConnector(cfg, featureChecker)
 		assets, edges, err := conn.Discover(r.Context())
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Connector discovery failed: %v", err), http.StatusInternalServerError)
+			InternalError(w, "Connector discovery failed")
 			return
 		}
 
-		LogAuditEvent(orgID, "CONNECTOR_SCAN", map[string]interface{}{
-			"connector": "aws",
-			"role_arn":  req.RoleARN,
-			"assets":    len(assets),
-			"edges":     len(edges),
+		LogAuditEvent(ar.OrgID, "CONNECTOR_SCAN", map[string]interface{}{
+			"connector":  "aws",
+			"accountId":  account.AccountId,
+			"roleArn":    account.RoleArn,
+			"regions":    req.Regions,
+			"assets":     len(assets),
+			"edges":      len(edges),
 		})
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"organization": orgID,
+		JSONResponse(w, http.StatusOK, map[string]interface{}{
+			"organization": ar.OrgID,
 			"assets":       assets,
 			"edges":        edges,
 		})
