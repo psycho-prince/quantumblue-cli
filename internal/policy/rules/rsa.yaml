@@ -8,6 +8,7 @@
   rationale: >
     RSA key exchange is broken by Shor's algorithm and is subject to
     harvest-now-decrypt-later capture of recorded traffic. Keys under 3072 bits also face near-term classical computing threats.
+    This rule is consistent with NIST IR 8547 and NIST SP 800-57 guidance.
   references: [ "NIST IR 8547", "NIST SP 800-57" ]
   migration: hybrid-kem
 
@@ -20,6 +21,7 @@
   rationale: >
     RSA key exchange is broken by Shor's algorithm and is subject to
     harvest-now-decrypt-later capture of recorded traffic.
+    This rule is consistent with NIST IR 8547 guidance.
   references: [ "NIST IR 8547" ]
   migration: hybrid-kem
 

@@ -1,15 +1,26 @@
 package cbom
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/psycho-prince/pqc-sdk/internal/policy"
 	"github.com/xeipuuv/gojsonschema"
 )
+
+//go:embed schemas/cyclonedx-1.6-cbom.json
+var schemaFS embed.FS
+
+func getSchemaJSON() (string, error) {
+	data, err := schemaFS.ReadFile("schemas/cyclonedx-1.6-cbom.json")
+	if err != nil {
+		return "", fmt.Errorf("embedded schema not found: %w", err)
+	}
+	return string(data), nil
+}
 
 // Asset represents a discovered cryptographic asset.
 type Asset struct {
@@ -154,8 +165,11 @@ func (c *CBOM) ToJSON() ([]byte, error) {
 
 // ValidateSchema performs a validation against CycloneDX 1.6 expectations.
 func (c *CBOM) ValidateSchema(data []byte) error {
-	pwd, _ := os.Getwd()
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + pwd + "/schemas/cyclonedx-1.6-cbom.json")
+	schemaJSON, err := getSchemaJSON()
+	if err != nil {
+		return fmt.Errorf("schema unavailable: %v", err)
+	}
+	schemaLoader := gojsonschema.NewStringLoader(schemaJSON)
 	documentLoader := gojsonschema.NewBytesLoader(data)
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
