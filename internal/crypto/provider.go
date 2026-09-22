@@ -8,6 +8,7 @@ import (
 // KeyProvider abstracts key management, enabling HSM or file-based custody.
 type KeyProvider interface {
 	GenerateKey(id string) error
+	WriteKey(id string, key []byte) error
 	Sign(id string, data []byte) ([]byte, error)
 	Verify(id string, data, signature []byte) (bool, error)
 	Destroy(id string) error
@@ -94,4 +95,9 @@ func (p *FileKeyProvider) Destroy(id string) error {
 
 func (p *FileKeyProvider) Show(id string) ([]byte, error) {
 	return os.ReadFile(p.keyPath(id))
+}
+
+// WriteKey writes a raw key to storage.
+func (p *FileKeyProvider) WriteKey(id string, key []byte) error {
+	return os.WriteFile(p.keyPath(id), key, 0600)
 }
