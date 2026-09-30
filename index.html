@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Blue — Continuous Cryptographic Posture Management CLI</title>
+    <meta name="description" content="Go CLI for hybrid post-quantum signatures (ML-DSA-65 / ML-KEM-768), RFC 3161 timestamping, CBOM generation, TLS scanning, and eBPF runtime discovery. Part of the QuantumBlue CCPM platform.">
+    <meta name="keywords" content="Quantum Blue, PQC, Post-Quantum Cryptography, ML-DSA-65, ML-KEM-768, FIPS 203, FIPS 204, RFC 3161, CBOM, Go CLI, eBPF, CCPM, Shift-Left, HNDL">
+    <meta property="og:title" content="Quantum Blue — CCPM CLI">
+    <meta property="og:description" content="Hybrid PQC signing (ML-DSA-65), RFC 3161 timestamping, CBOM generation, TLS scanning & eBPF runtime discovery.">
+    <meta property="og:url" content="https://quantum-blue.in">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --bg-card: #0e131f;
+            --bg-card-hover: #141c2e;
+            --border-color: #1e293b;
+            --border-glow: #00f2fe;
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-purple: #7f00ff;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --code-bg: #05070a;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        code, pre, .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Ambient Glow Background */
+        .glow-bg {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            height: 600px;
+            background: radial-gradient(circle at 50% 20%, rgba(0, 242, 254, 0.08) 0%, rgba(127, 0, 255, 0.05) 40%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        header {
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(7, 9, 14, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 72px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #000;
+            font-size: 0.9rem;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--accent-cyan);
+        }
+
+        .btn-github {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-github:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 96px 0 64px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            background: rgba(0, 242, 254, 0.08);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            color: var(--accent-cyan);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 24px;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+            background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1 span {
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto 40px;
+            font-weight: 400;
+        }
+
+        /* Command Install Bar */
+        .install-box {
+            max-width: 680px;
+            margin: 0 auto 48px;
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .command-text {
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .prompt {
+            color: var(--text-dim);
+            user-select: none;
+        }
+
+        .copy-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            color: #fff;
+            border-color: var(--accent-cyan);
+        }
+
+        /* Features Grid */
+        .section-title {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-title h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .section-title p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-bottom: 96px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.25s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(0, 242, 254, 0.4);
+            transform: translateY(-4px);
+            background: var(--bg-card-hover);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: var(--accent-cyan);
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Interactive Terminal / Code Walkthrough */
+        .demo-section {
+            margin-bottom: 96px;
+        }
+
+        .terminal-window {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .terminal-header {
+            background: #0b0f19;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: rgba(255,255,255,0.08);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .terminal-body {
+            padding: 24px;
+            min-height: 280px;
+            overflow-x: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-comment { color: var(--text-dim); }
+        .code-cmd { color: var(--accent-cyan); }
+        .code-flag { color: #f43f5e; }
+        .code-output { color: var(--text-muted); margin-top: 12px; line-height: 1.7; }
+        .code-success { color: var(--success); }
+
+        /* Standards & Compliance Table */
+        .specs-section {
+            margin-bottom: 96px;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .spec-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 24px;
+        }
+
+        .spec-item h4 {
+            color: var(--accent-cyan);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .spec-item h3 {
+            font-size: 1.15rem;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .spec-item p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Identity & Verification */
+        .verification-box {
+            background: linear-gradient(135deg, rgba(14, 19, 31, 0.9) 0%, rgba(20, 28, 46, 0.9) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 96px;
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+        }
+
+        .verif-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--success);
+            flex-shrink: 0;
+        }
+
+        .verif-content h3 {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .verif-content p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .verif-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Roadmap Section */
+        .roadmap-section {
+            margin-bottom: 96px;
+        }
+
+        .roadmap-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .roadmap-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 2.25rem; }
+        }
+
+        .roadmap-column {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        .roadmap-column h3 {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .status-badge.current {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-badge.planned {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .roadmap-list {
+            list-style: none;
+        }
+
+        .roadmap-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .roadmap-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .roadmap-list.planned li::before {
+            content: "→";
+            color: var(--warning);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 48px 0;
+            background: #040609;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-bg"></div>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="container">
+            <div class="nav-inner">
+                <a href="#" class="logo">
+                    <div class="logo-icon">QB</div>
+                    <span>QUANTUM BLUE</span>
+                </a>
+                <nav>
+                    <a href="#features">Features</a>
+                    <a href="#compliance">CCPM Platform</a>
+                    <a href="#cli">CLI Examples</a>
+                    <a href="#specs">Specifications</a>
+                    <a href="#roadmap">Roadmap</a>
+                </nav>
+                <a href="https://github.com/psycho-prince/quantumblue-cli" target="_blank" rel="noopener" class="btn-github">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    GitHub Repo
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="badge">
+                <span class="badge-dot"></span>
+                CCPM Platform — Go CLI
+            </div>
+            <h1>Continuous Cryptographic Posture Management<br><span>CLI + Runtime Discovery Engine</span></h1>
+            <p class="hero-subtitle">
+                The QuantumBlue CLI is the command-line interface to the Continuous Cryptographic Posture Management (CCPM) platform. Hybrid PQC signing (ML-DSA-65/ML-KEM-768), RFC 3161 timestamping, CBOM generation, TLS certificate scanning, and eBPF runtime discovery — all from the terminal.
+            </p>
+
+            <div class="install-box">
+                <div class="command-text">
+                    <span class="prompt">$</span>
+                    <span id="cmdText">go install github.com/psycho-prince/quantumblue-cli@latest</span>
+                </div>
+                <button class="copy-btn" onclick="copyInstallCmd()">Copy Command</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="container">
+        <div class="section-title">
+            <h2>What the CLI Does</h2>
+            <p>Designed for security teams, platform engineers, and developers migrating to post-quantum cryptography.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h3>Hybrid PQC Signing</h3>
+                <p>Combines classical signatures (Ed25519 / RSA-4096) with NIST FIPS 204 ML-DSA-65 to protect against both classical and quantum attacks. Generates hybrid signatures that legacy clients can still verify.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <h3>RFC 3161 Timestamping</h3>
+                <p>Binds files to globally synchronized Time Stamp Authorities (TSA), creating cryptographically immutable proof of file existence — critical for legal evidence and chain-of-custody workflows.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></table/></svg>
+                </div>
+                <h3>CBOM Generation</h3>
+                <p>Generates Cryptographic Bill of Materials (CBOM) in CycloneDX 1.6 JSON format. Scans source code and runtime environments for legacy crypto — RSA, ECC, SHA-1 — and produces auditable inventory reports.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h3>TLS Surface Scanning</h3>
+                <p>Scans any domain's TLS certificate to detect quantum vulnerability. Reports HNDL (Harvest Now, Decrypt Later) risk grade, algorithm, key size, and detected PQC algorithms. The lead-gen entry point to the platform.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <h3>eBPF Runtime Discovery</h3>
+                <p>Phase 2 capability. When attached to Linux hosts, the eBPF sensor observes real cryptographic library calls (OpenSSL, BoringSSL, Java Crypto) in production — no agents, no code changes. Builds the Cryptographic Asset Graph from ground truth.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <h3>Shift-Left Guardrail</h3>
+                <p>Phase 4 capability. Integrates with GitHub and GitLab to block pull requests that introduce legacy cryptography. CLI mode for any CI pipeline. Stops new cryptographic debt from entering production.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Terminal Section -->
+    <section id="cli" class="container demo-section">
+        <div class="section-title">
+            <h2>Command-Line Interface</h2>
+            <p>Simple, deterministic Go CLI designed for easy scriptability and pipeline integration.</p>
+        </div>
+
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                </div>
+                <div class="terminal-tabs">
+                    <button class="tab-btn active" onclick="switchTab(0)">Keygen</button>
+                    <button class="tab-btn" onclick="switchTab(1)">Hybrid Sign</button>
+                    <button class="tab-btn" onclick="switchTab(2)">Verify</button>
+                    <button class="tab-btn" onclick="switchTab(3)">CBOM Export</button>
+                    <button class="tab-btn" onclick="switchTab(4)">TLS Scan</button>
+                </div>
+            </div>
+            <div class="terminal-body font-mono">
+                <!-- Tab 1: Keygen -->
+                <div class="tab-content active" id="tab-0">
+                    <p class="code-comment"># Generate a post-quantum ML-DSA-65 keypair alongside Ed25519</p>
+                    <p><span class="code-cmd">qb keygen</span> <span class="code-flag">--scheme</span> hybrid-mldsa65-ed25519 <span class="code-flag">--out</span> ~/.qb/keys/</p>
+                    <div class="code-output">
+                        Generating hybrid keypair...<br>
+                        [+] Classical key: Ed25519 (generated)<br>
+                        [+] Quantum key:   ML-DSA-65 (NIST FIPS 204 compliant)<br>
+                        [+] Public key saved to: ~/.qb/keys/identity.pub.pem<br>
+                        [+] Private key encrypted with AES-256-GCM saved to: ~/.qb/keys/identity.priv.pem<br>
+                        <span class="code-success">✓ Keypair generation successful.</span>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Hybrid Sign -->
+                <div class="tab-content" id="tab-1">
+                    <p class="code-comment"># Sign evidence file with hybrid signature and embed RFC 3161 TSA proof</p>
+                    <p><span class="code-cmd">qb sign</span> <span class="code-flag">--file</span> evidence_log.json <span class="code-flag">--key</span> ~/.qb/keys/identity.priv.pem <span class="code-flag">--tsa</span> http://timestamp.digicert.com</p>
+                    <div class="code-output">
+                        Reading target: evidence_log.json (SHA-256: 8f4e2...a19)<br>
+                        Computing ML-DSA-65 signature... done.<br>
+                        Computing Ed25519 signature... done.<br>
+                        Contacting TSA RFC 3161 provider: http://timestamp.digicert.com...<br>
+                        Received Timestamp Token (TST) bound to signature block.<br>
+                        <span class="code-success">✓ Output file created: evidence_log.json.qbsig</span>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Verify -->
+                <div class="tab-content" id="tab-2">
+                    <p class="code-comment"># Verify hybrid signature, algorithm authenticity, and timestamp validity</p>
+                    <p><span class="code-cmd">qb verify</span> <span class="code-flag">--file</span> evidence_log.json <span class="code-flag">--sig</span> evidence_log.json.qbsig <span class="code-flag">--pubkey</span> ~/.qb/keys/identity.pub.pem</p>
+                    <div class="code-output">
+                        Verifying evidence_log.json against signature container...<br>
+                        [✓] Ed25519 Signature: VALID<br>
+                        [✓] ML-DSA-65 Signature: VALID (FIPS 204)<br>
+                        [✓] RFC 3161 Timestamp: VALID (TSA Certificate Chain Verified)<br>
+                        [✓] Time of Signing: 2026-09-06T15:20:11 UTC<br>
+                        <span class="code-success">Status: ADMISSIBLE EVIDENCE CONTAINER</span>
+                    </div>
+                </div>
+
+                <!-- Tab 4: CBOM Export -->
+                <div class="tab-content" id="tab-3">
+                    <p class="code-comment"># Generate Cryptographic Bill of Materials (CBOM) for compliance audit</p>
+                    <p><span class="code-cmd">qb cbom</span> <span class="code-flag">--source</span> ./system_evidence/ <span class="code-flag">--format</span> cyclone-dx-json <span class="code-flag">--push</span></p>
+                    <div class="code-output">
+                        Scanning directory: ./system_evidence/<br>
+                        Hashed 42 artifacts via SHA-256 & SHA-512.<br>
+                        Constructed Merkle DAG root: 0x9f88a7c2b...<br>
+                        Uploading CBOM to QuantumBlue dashboard...<br>
+                        <span class="code-success">✓ Exported CBOM record: cbom_manifest_65b.json</span>
+                    </div>
+                </div>
+
+                <!-- Tab 5: TLS Scan -->
+                <div class="tab-content" id="tab-4">
+                    <p class="code-comment"># Scan a domain for quantum vulnerability and HNDL risk grade</p>
+                    <p><span class="code-cmd">qb scan</span> quantum-blue.in <span class="code-flag">--push</span></p>
+                    <div class="code-output">
+                        Connecting to quantum-blue.in:443...<br>
+                        [+] Protocol: TLSv1.3<br>
+                        [+] Issuer: Cloudflare, Inc.<br>
+                        [+] Algorithm: ML-DSA-65 (FIPS 204)<br>
+                        [+] Key Size: 65 bits (lattice-based)<br>
+                        [+] Detected PQC: ML-DSA (FIPS 204), X25519 (ECDH)<br>
+                        <span class="code-success">Grade: A+ — Quantum-Safe</span><br>
+                        Uploading scan result to dashboard...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Standards & Specifications Section -->
+    <section id="specs" class="container specs-section">
+        <div class="section-title">
+            <h2>Cryptographic Specifications</h2>
+            <p>Strict implementation of published standards without proprietary protocol modifications.</p>
+        </div>
+
+        <div class="specs-grid">
+            <div class="spec-item">
+                <h4>NIST FIPS 204</h4>
+                <h3>ML-DSA-65 Signature</h3>
+                <p>Primary post-quantum digital signature algorithm (formerly Dilithium3) providing Security Category 3 (equivalent to AES-192 resistance).</p>
+            </div>
+
+            <div class="spec-item">
+                <h4>NIST FIPS 203</h4>
+                <h3>ML-KEM-768 Encapsulation</h3>
+                <p>Module-Lattice-Based Key-Encapsulation Mechanism (formerly Kyber768) utilized for secure quantum-safe key exchange.</p>
+            </div>
+
+            <div class="spec-item">
+                <h4>IETF RFC 3161</h4>
+                <h3>Trusted Timestamping</h3>
+                <p>Internet X.509 Public Key Infrastructure Time-Stamp Protocol binding SHA-256 hashes to trusted clock authorities.</p>
+            </div>
+
+            <div class="spec-item" id="compliance">
+                <h4>CCPM Platform</h4>
+                <h3>Continuous Cryptographic Posture Management</h3>
+                <p>The CLI is one component of the QuantumBlue CCPM platform: Discover → Assess → Prioritize → Migrate → Verify → Prove. Connects to dashboard, eBPF sensor, CI/CD guardrails, and DSPM integrations.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Verification / Identity Notice -->
+    <section class="container">
+        <div class="verification-box">
+            <div class="verif-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="verif-content">
+                <h3>Release Verification & Maintainer Identity</h3>
+                <p>
+                    All binary releases of <code>quantumblue-cli</code> are digitally signed using an Extended Validation (EV) Code Signing Certificate issued to <strong>Prince T. Philip</strong> (Verified Individual) via Sectigo RSA Extended Validation Hardware Token.
+                </p>
+                <span class="verif-tag">EV Certificate: Issued to Prince T. Philip (Verified Individual)</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Project Status & Roadmap Section -->
+    <section id="roadmap" class="container roadmap-section">
+        <div class="section-title">
+            <h2>Platform Roadmap</h2>
+            <p>Clear distinction between what is available today and planned future developments across the CCPM platform.</p>
+        </div>
+
+        <div class="roadmap-grid">
+            <div class="roadmap-column">
+                <h3>Current Release <span class="status-badge current">v0.2.x Available</span></h3>
+                <ul class="roadmap-list">
+                    <li>Go CLI with hybrid signature scheme (ML-DSA-65 + Ed25519)</li>
+                    <li>RFC 3161 Time Stamp Authority (TSA) protocol integration</li>
+                    <li>CBOM manifest generator (CycloneDX 1.6 JSON schema)</li>
+                    <li>TLS certificate scanner with HNDL risk grading</li>
+                    <li>Encrypted local key storage with AES-256-GCM</li>
+                    <li>Dashboard upload and scan result reporting</li>
+                    <li>Open-source source code hosted on GitHub</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-column">
+                <h3>Platform Roadmap <span class="status-badge planned">In Development</span></h3>
+                <ul class="roadmap-list planned">
+                    <li><strong>Phase 2:</strong> eBPF runtime sensor for zero-instrumentation discovery</li>
+                    <li><strong>Phase 2:</strong> Cryptographic Asset Graph from production ground truth</li>
+                    <li><strong>Phase 3:</strong> Migration engine with Envoy/Istio/Kong integration</li>
+                    <li><strong>Phase 3:</strong> One-click automated rollback safety nets</li>
+                    <li><strong>Phase 3:</strong> Proof of Migration artifacts for auditors</li>
+                    <li><strong>Phase 4:</strong> GitHub/GitLab shift-left CI/CD blockers</li>
+                    <li><strong>Phase 4:</strong> DSPM API integration for automated HNDL prioritization</li>
+                    <li><strong>Phase 4:</strong> AI Copilot for remediation guidance</li>
+                    <li>PKCS#11 hardware security module (HSM) support</li>
+                    <li>Support for SLH-DSA (SPHINCS+) stateless signatures</li>
+                    <li>Formal cryptographic audit by independent lab</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-inner">
+            <div>
+                <p>© 2026 Quantum Blue — Continuous Cryptographic Posture Management. A project by Prince T. Philip.</p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/psycho-prince/quantumblue-cli" target="_blank" rel="noopener">GitHub Repository</a>
+                <a href="https://github.com/psycho-prince/quantumblue-cli/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a>
+                <a href="https://github.com/psycho-prince/quantumblue-cli/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a>
+                <a href="https://quantum-blue.in" target="_blank" rel="noopener">CCPM Platform</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS for copy & tab actions -->
+    <script>
+        function copyInstallCmd() {
+            const cmdText = document.getElementById("cmdText").innerText;
+            navigator.clipboard.writeText(cmdText).then(() => {
+                const btn = document.querySelector(".copy-btn");
+                btn.innerText = "Copied!";
+                setTimeout(() => {
+                    btn.innerText = "Copy Command";
+                }, 2000);
+            });
+        }
+
+        function switchTab(index) {
+            const tabs = document.querySelectorAll(".tab-btn");
+            const contents = document.querySelectorAll(".tab-content");
+
+            tabs.forEach((tab, i) => {
+                if (i === index) {
+                    tab.classList.add("active");
+                } else {
+                    tab.classList.remove("active");
+                }
+            });
+
+            contents.forEach((content, i) => {
+                if (i === index) {
+                    content.classList.add("active");
+                } else {
+                    content.classList.remove("active");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
